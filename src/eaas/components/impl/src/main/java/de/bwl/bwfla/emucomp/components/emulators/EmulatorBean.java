@@ -216,11 +216,21 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private static final String CHECKPOINT_FILE_EXTENSION = ".tar.gz";
 
 	protected boolean isKvmDeviceEnabled = false;
+	protected boolean isEmuconInitDisabled = false;
 
 
 	public static EmulatorBean createEmulatorBean(MachineConfiguration env) throws ClassNotFoundException
 	{
-		String targetBean = env.getEmulator().getBean() + "Bean";
+		// we check first if there is a generic RunnerBean
+		String targetBean;
+
+		if(LegacyBean2Machine.emulatorMachineMap.containsKey(env.getEmulator().getBean())) {
+			targetBean = "EmulatorRuntimeBean";
+		}
+		else
+		{
+			targetBean = env.getEmulator().getBean() + "Bean";
+		}
 		Class<?> beanClass = Class.forName(EmulatorBean.class.getPackage().getName() + "." + targetBean);
 		return (EmulatorBean)CDI.current().select(beanClass).get();
 	}
@@ -700,16 +710,18 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				final String conNetDir = hostPathReplacer.apply(this.getNetworksDir().toString());
 
-				// Add emulator's command with replaced host data directory
-				cgen.addArguments("--", "/usr/bin/emucon-init", "--networks-dir", conNetDir);
-				if (this.isXpraBackendEnabled()) {
-					final String xprasock = this.getXpraSocketPath().toString();
-					cgen.addArguments("--xpra-socket", hostPathReplacer.apply(xprasock));
-				}
+				if(!this.isEmuconInitDisabled) {
+					// Add emulator's command with replaced host data directory
+					cgen.addArguments("--", "/usr/bin/emucon-init", "--networks-dir", conNetDir);
+					if (this.isXpraBackendEnabled()) {
+						final String xprasock = this.getXpraSocketPath().toString();
+						cgen.addArguments("--xpra-socket", hostPathReplacer.apply(xprasock));
+					}
 
-				if (this.isPulseAudioEnabled()) {
-					final String pulsesock = this.getPulseAudioSocketPath().toString();
-					cgen.addArguments("--pulse-socket", hostPathReplacer.apply(pulsesock));
+					if (this.isPulseAudioEnabled()) {
+						final String pulsesock = this.getPulseAudioSocketPath().toString();
+						cgen.addArguments("--pulse-socket", hostPathReplacer.apply(pulsesock));
+					}
 				}
 
 				cgen.addArgument("--");
