@@ -32,6 +32,13 @@ public class EmulatorRuntimeBean extends EmulatorBean
 
 		super.setRuntimeConfiguration(environment);
         config.setMachine(machine);
+
+        if(getEmuBeanMode(environment) == EmulatorBeanMode.XPRA) {
+			EmulatorRuntimeConfiguration.FrameworkComponent frameworkComponent = new EmulatorRuntimeConfiguration.FrameworkComponent();
+			frameworkComponent.setComponent("eaas:xpra");
+			frameworkComponent.setPath("/emucon/xpra-iosock");
+			config.getFrameworkComponents().add(frameworkComponent);
+		}
 	}
 
 	@Override

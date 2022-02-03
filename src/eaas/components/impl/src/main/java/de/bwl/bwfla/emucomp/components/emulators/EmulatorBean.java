@@ -1456,7 +1456,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	// Protected
 	// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	private EmulatorBeanMode getEmuBeanMode(MachineConfiguration config) throws IllegalArgumentException
+	EmulatorBeanMode getEmuBeanMode(MachineConfiguration config) throws IllegalArgumentException
 	{
 		final UiOptions options = config.getUiOptions();
 		if (options != null && options.getForwarding_system() != null) {
