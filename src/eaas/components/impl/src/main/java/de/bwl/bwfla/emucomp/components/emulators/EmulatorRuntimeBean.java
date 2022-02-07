@@ -39,6 +39,12 @@ public class EmulatorRuntimeBean extends EmulatorBean
 			frameworkComponent.setPath("/emucon/xpra-iosock");
 			config.getFrameworkComponents().add(frameworkComponent);
 		}
+		if (this.isPulseAudioEnabled()) {
+			EmulatorRuntimeConfiguration.FrameworkComponent frameworkComponent = new EmulatorRuntimeConfiguration.FrameworkComponent();
+			frameworkComponent.setComponent("eaas:pulseaudio");
+			frameworkComponent.setPath(this.getPulseAudioSocketPath().toString());
+			config.getFrameworkComponents().add(frameworkComponent);
+		}
 	}
 
 	@Override

@@ -401,7 +401,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return this.getSocketsDir().resolve("xpra-iosocket");
 	}
 
-	private Path getPulseAudioSocketPath()
+	protected Path getPulseAudioSocketPath()
 	{
 		return this.getSocketsDir().resolve("pulse-iosocket");
 	}
