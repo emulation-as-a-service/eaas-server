@@ -73,12 +73,18 @@ public class AutomationAPI
 	}
 
 
+
 	@GET
 	@Path("/automations")
 	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getAllAutomations(@Context UriInfo uri) throws IOException
 	{
+
+		System.out.println(uri.getQueryParameters());
+		System.out.println(uri.getPathParameters());
+
+
 
 		ArrayList<AllAutomationsResponse.AutomationResult> resultList = new ArrayList<>();
 		for (String taskId : automations) {
@@ -192,6 +198,9 @@ public class AutomationAPI
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response postExecute(AutomationRequest request, @Context UriInfo uri)
 	{
+
+
+
 
 		final String taskID;
 		try {
