@@ -1,7 +1,6 @@
 package de.bwl.bwfla.automation.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.automation.api.AutomationRequest;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
@@ -58,7 +57,7 @@ public class AutomationTask extends BlockingTask<Object>
 			request.setFilePath(filePath);
 		}
 
-		ObjectMapper mapper = DataUtils.json().mapper();
+		ObjectMapper mapper = new ObjectMapper();
 		String configName = taskPath + "/config.json";
 
 		log.info("Writing to file: " + mapper.writeValueAsString(request));

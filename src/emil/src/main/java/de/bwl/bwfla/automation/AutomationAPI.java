@@ -1,7 +1,6 @@
 package de.bwl.bwfla.automation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.apiutils.WaitQueueCreatedResponse;
 import de.bwl.bwfla.apiutils.WaitQueueResponse;
 import de.bwl.bwfla.automation.api.AllAutomationsResponse;
@@ -92,7 +91,7 @@ public class AutomationAPI
 
 
 			var configData =
-					DataUtils.json().mapper().readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationRequest.class);
+					new ObjectMapper().readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationRequest.class);
 
 
 			AllAutomationsResponse.AutomationResult result = new AllAutomationsResponse.AutomationResult();
@@ -126,7 +125,7 @@ public class AutomationAPI
 			if (resultFile.exists()) {
 
 				var pyResult =
-						DataUtils.json().mapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
+						new ObjectMapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
 				//result.setIsDone(true);
 				result.setResult(pyResult.getResult());
 			}
@@ -149,7 +148,7 @@ public class AutomationAPI
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response postConfiguration(AutomationConfigurationRequest request, @Context UriInfo uri)
 	{
-		ObjectMapper mapper = DataUtils.json().mapper();
+		ObjectMapper mapper = new ObjectMapper();
 		String configName = "/tmp-storage/automation/automation_config.json";
 
 		try {

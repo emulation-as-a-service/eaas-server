@@ -1,8 +1,9 @@
 package de.bwl.bwfla.sikuli.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.openslx.eaas.common.databind.DataUtils;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
@@ -25,7 +26,7 @@ public class CreateSikuliAutomationTask extends BlockingTask<Object> {
 
         log.info("Creating Sikuli Script...");
 
-        ObjectWriter objectWriter = DataUtils.json().writer().withDefaultPrettyPrinter();
+        ObjectWriter objectWriter = new ObjectMapper().writer().with(SerializationFeature.INDENT_OUTPUT).withDefaultPrettyPrinter();
         String json;
         try {
             json = objectWriter.writeValueAsString(request.getEntries());
