@@ -1,6 +1,7 @@
 package de.bwl.bwfla.emil.datatypes;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.rest.NetworkEnvironmentNetworkingType;
 
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class NetworkEnvironment extends JaxbType {
 
     @XmlElement(required = true)

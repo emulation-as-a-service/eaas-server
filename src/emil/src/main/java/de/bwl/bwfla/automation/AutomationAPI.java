@@ -1,6 +1,9 @@
 package de.bwl.bwfla.automation;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import de.bwl.bwfla.apiutils.WaitQueueCreatedResponse;
 import de.bwl.bwfla.apiutils.WaitQueueResponse;
 import de.bwl.bwfla.automation.api.AllAutomationsResponse;
@@ -8,14 +11,17 @@ import de.bwl.bwfla.automation.api.AutomationConfigurationRequest;
 import de.bwl.bwfla.automation.api.AutomationRequest;
 import de.bwl.bwfla.automation.impl.AutomationTask;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.ws.rs.*;
@@ -36,6 +42,11 @@ import java.util.logging.Logger;
 @Path("/automation/api/v1")
 public class AutomationAPI
 {
+
+	@Inject
+	@AuthenticatedUser
+	private UserContext authenticatedUser;
+
 	private static final Logger LOG = Logger.getLogger("AUTOMATION");
 
 	private final TaskManager taskmgr;
@@ -73,18 +84,12 @@ public class AutomationAPI
 	}
 
 
-
 	@GET
 	@Path("/automations")
 	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getAllAutomations(@Context UriInfo uri) throws IOException
 	{
-
-		System.out.println(uri.getQueryParameters());
-		System.out.println(uri.getPathParameters());
-
-
 
 		ArrayList<AllAutomationsResponse.AutomationResult> resultList = new ArrayList<>();
 		for (String taskId : automations) {
@@ -96,8 +101,10 @@ public class AutomationAPI
 			}
 
 
-			var configData =
-					new ObjectMapper().readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationRequest.class);
+			var mapper = new ObjectMapper().enable(JsonParser.Feature.ALLOW_COMMENTS)
+					.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+					.registerModule(new JaxbAnnotationModule());
+			var configData = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationRequest.class);
 
 
 			AllAutomationsResponse.AutomationResult result = new AllAutomationsResponse.AutomationResult();
@@ -201,10 +208,9 @@ public class AutomationAPI
 
 
 
-
 		final String taskID;
 		try {
-			taskID = taskmgr.submit(new AutomationTask(request));
+			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser.getToken()));
 
 			automations.add(taskID);
 		}

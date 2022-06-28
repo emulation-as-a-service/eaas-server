@@ -36,6 +36,10 @@ public class ComputeRequest extends JaxbType {
         this.timeout = timeout;
     }
 
+    public ComputeRequest()
+    {
+    }
+
     @XmlRootElement
     public static class ComponentSpec {
         @XmlElement(required = true)
@@ -84,6 +88,10 @@ public class ComputeRequest extends JaxbType {
         public void setSaveEnvironmentLabel(String saveEnvironmentLabel)
         {
             this.saveEnvironmentLabel = saveEnvironmentLabel;
+        }
+
+        public ComponentSpec()
+        {
         }
     }
 }

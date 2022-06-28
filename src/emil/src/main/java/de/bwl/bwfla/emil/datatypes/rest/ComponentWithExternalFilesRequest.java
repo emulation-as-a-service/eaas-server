@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emil.datatypes.rest;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.emucomp.api.PartitionTableType;
@@ -166,6 +167,7 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 
 	@XmlRootElement
 	@XmlAccessorType(XmlAccessType.NONE)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public static class BaseFileSource extends JaxbType
 	{
 		@XmlElement(required = true, name = "action")
