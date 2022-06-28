@@ -34,6 +34,10 @@ public class ComputeResponse extends JaxbType {
         this.result = result;
     }
 
+    public ComputeResponse()
+    {
+    }
+
     @XmlRootElement
     public static class ComputeResult {
         @XmlElement
@@ -78,6 +82,10 @@ public class ComputeResponse extends JaxbType {
 
         public void setEnvironmentId(String environmentId) {
             this.environmentId = environmentId;
+        }
+
+        public ComputeResult()
+        {
         }
     }
 }

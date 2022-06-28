@@ -11,185 +11,235 @@ import de.bwl.bwfla.emil.datatypes.rest.SnapshotResponse;
 import de.bwl.bwfla.emil.datatypes.snapshot.SaveNewEnvironmentRequest;
 import de.bwl.bwfla.emucomp.api.ComponentState;
 
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class HeadlessSession extends Session {
 
-    private boolean isFinished = false;
-    private final UserContext userContext;
+public class HeadlessSession extends Session
+{
 
-    public boolean finished() {
-        return isFinished;
-    }
+	private boolean isFinished = false;
+	private final UserContext userContext;
 
-    private final List<ComputeRequest.ComponentSpec> headlessComponents;
-    private final Set<String> componentsToComplete;
-    private final Set<ComputeRequest.ComponentSpec> componentsToSave;
-    private final HashMap<String, SnapshotResponse> saveEnvironmentTasks = new HashMap<>();
-    private final HashMap<String, String> outputTasks = new HashMap<>();
+	public boolean finished()
+	{
+		return isFinished;
+	}
 
-    public HeadlessSession(List<ComputeRequest.ComponentSpec> componentSpecList, UserContext userContext) {
-        this.userContext = userContext;
-        this.componentsToComplete = Collections.synchronizedSet(
-                componentSpecList.stream()
-                        .filter(c -> !c.shouldSaveEnvironment())
-                        .map(ComputeRequest.ComponentSpec::getComponentId)
-                        .collect(Collectors.toCollection(HashSet::new))
-        );
+	private final List<ComputeRequest.ComponentSpec> headlessComponents;
+	private final Set<String> componentsToComplete;
+	private final Set<ComputeRequest.ComponentSpec> componentsToSave;
+	private final HashMap<String, SnapshotResponse> saveEnvironmentTasks = new HashMap<>();
+	private final HashMap<String, String> outputTasks = new HashMap<>();
 
-        this.componentsToSave = Collections.synchronizedSet(
-                componentSpecList.stream()
-                        .filter(c -> c.getSaveEnvironmentLabel() != null)
-                        .filter(c -> c.getEnvironmentId() != null)
-                        .collect(Collectors.toCollection(HashSet::new))
-        );
+	public HeadlessSession(List<ComputeRequest.ComponentSpec> componentSpecList, UserContext userContext)
+	{
+		this.userContext = userContext;
+		this.componentsToComplete = Collections.synchronizedSet(
+				componentSpecList.stream()
+						.filter(c -> !c.shouldSaveEnvironment())
+						.map(ComputeRequest.ComponentSpec::getComponentId)
+						.collect(Collectors.toCollection(HashSet::new))
+		);
 
-        headlessComponents = componentSpecList;
-        headlessComponents.forEach(c -> components().add(new SessionComponent(c.getComponentId())));
-    }
+		this.componentsToSave = Collections.synchronizedSet(
+				componentSpecList.stream()
+						.filter(c -> c.getSaveEnvironmentLabel() != null)
+						.filter(c -> c.getEnvironmentId() != null)
+						.collect(Collectors.toCollection(HashSet::new))
+		);
 
-    public List<ComputeResponse.ComputeResult> getResult(Components endpoint, Logger log) {
-        if (!isFinished) {
-            return null;
-        }
+		headlessComponents = componentSpecList;
+		headlessComponents.forEach(c -> components().add(new SessionComponent(c.getComponentId())));
+	}
 
-        final List<ComputeResponse.ComputeResult> result = new ArrayList<>();
-        headlessComponents
-                .forEach(
-                        c -> {
-                            ComputeResponse.ComputeResult cr = new ComputeResponse.ComputeResult();
-                            cr.setComponentId(c.getComponentId());
-                            try {
-                                final var response = endpoint.getState(cr.getComponentId());
-                                cr.setState(((ComponentStateResponse) response).getState());
-                            }
-                            catch (Exception error) {
-                                log.log(Level.WARNING, "Fetching component's state failed!", error);
-                                cr.setState(ComponentState.FAILED.toString());
-                            }
+	public List<ComputeResponse.ComputeResult> getResult(Components endpoint, Logger log)
+	{
+		if (!isFinished) {
+			return null;
+		}
 
-                            if (c.shouldSaveEnvironment()) {
-                                SnapshotResponse taskResponse;
-                                if ((taskResponse = saveEnvironmentTasks.get(c.getComponentId())) != null) {
-                                    cr.setEnvironmentId(taskResponse.getEnvId());
-                                }
-                            } else {
-                                cr.setResultBlob(outputTasks.get(c.getComponentId()));
-                            }
+		final List<ComputeResponse.ComputeResult> result = new ArrayList<>();
+		headlessComponents
+				.forEach(
+						c -> {
+							ComputeResponse.ComputeResult cr = new ComputeResponse.ComputeResult();
+							cr.setComponentId(c.getComponentId());
+							try {
+								final var response = endpoint.getState(cr.getComponentId());
+								cr.setState(((ComponentStateResponse) response).getState());
+							}
+							catch (Exception error) {
+								log.log(Level.WARNING, "Fetching component's state failed!", error);
+								cr.setState(ComponentState.FAILED.toString());
+							}
 
-                            result.add(cr);
-                        }
-                );
+							if (c.shouldSaveEnvironment()) {
+								SnapshotResponse taskResponse;
+								if ((taskResponse = saveEnvironmentTasks.get(c.getComponentId())) != null) {
+									cr.setEnvironmentId(taskResponse.getEnvId());
+								}
+							}
+							else {
+								cr.setResultBlob(outputTasks.get(c.getComponentId()));
+							}
 
-        return result;
-    }
+							result.add(cr);
+						}
+				);
 
-    @Override
-    public void onTimeout(Components endpoint, Logger log) {
+		return result;
+	}
 
-        log.info("In on Timeout for session: " + id() + " (this should only be called once per session)");
+	@Override
+	public void onTimeout(Components endpoint, Logger log)
+	{
 
-        // TODO only call when some flag is set? (e.g. shouldOperateOnTimeout)
-        // this stuff is necessary e.g. for Windows 98 environments, where the backend only registers the shutdown
-        // 20% of the time, we can use the timeout to operate
-        // however, after reaching this timeout, the session is no longer available, meaning output can't be retrieved
-        // via API anymore
+		log.info("In on Timeout for session: " + id() + " (this should only be called once per session)");
 
-        if (componentsToComplete.isEmpty() && componentsToSave.isEmpty()) {
-            log.info("Headless Sessions seems to be done already!");
+		// TODO only call when some flag is set? (e.g. shouldOperateOnTimeout)
+		// this stuff is necessary e.g. for Windows 98 environments, where the backend only registers the shutdown
+		// 20% of the time, we can use the timeout to operate
+		// however, after reaching this timeout, the session is no longer available, meaning output can't be retrieved
+		// via API anymore
 
-        } else {
-            log.warning("Found ongoing components, will force shutdown and try to save/export Output");
+		if (componentsToComplete.isEmpty() && componentsToSave.isEmpty()) {
+			log.info("Headless Sessions seems to be done already!");
 
-            componentsToComplete.forEach(component -> stopEnvironment(endpoint, log, component));
-            componentsToSave.forEach(c -> saveEnvironment(endpoint, c));
+		}
+		else {
+			log.warning("Found ongoing components, will force shutdown and try to save/export Output");
 
-        }
-        isFinished = true;
-    }
+			componentsToComplete.forEach(component -> stopEnvironment(endpoint, log, component));
+			componentsToSave.forEach(c -> saveEnvironment(endpoint, c));
 
-    @Override
-    public void keepalive(Components endpoint, Logger log) {
-        super.keepalive(endpoint, log);
+		}
+		isFinished = true;
+	}
 
-        log.info("Headless Keepalive, id " + id() + " ComponentsToComplete: " + componentsToComplete.size() + " ComponentsToSave: " + componentsToSave.size());
+	@Override
+	public void keepalive(Components endpoint, Logger log)
+	{
+		super.keepalive(endpoint, log);
 
-        this.componentsToComplete.removeIf(
-                component -> {
-                    try {
-                        ComponentResponse response = endpoint.getState(component);
-                        String componentState = ((ComponentStateResponse) response).getState();
-                        if (componentState.equals(ComponentState.STOPPED.name())) {
-                            stopEnvironment(endpoint, log, component);
-                            return true;
-                        }
-                        else if (componentState.equals(ComponentState.FAILED.name())){
-                            outputTasks.put(component, "Execution of " + component + " failed: Component Status is FAILED.");
-                            return true;
-                        }
-                        return false;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        outputTasks.put(component, "Execution of " + component + " failed: " +  e);
-                        return true;
-                    }
-                }
-        );
+		log.info("Headless Keepalive, id " + id() + " ComponentsToComplete: " + componentsToComplete.size() + " ComponentsToSave: " + componentsToSave.size());
 
-        this.componentsToSave.forEach(c -> {
-            SnapshotResponse t = saveEnvironmentTasks.get(c.getComponentId());
-            if (t == null) {
-                try {
-                    ComponentResponse response = endpoint.getState(c.getComponentId());
-                    String componentState = ((ComponentStateResponse) response).getState();
-                    if (componentState.equals(ComponentState.STOPPED.name())) {
-                        saveEnvironment(endpoint, c);
-                    }
-                    else if (componentState.equals(ComponentState.FAILED.name())) {
-                        saveEnvironmentTasks.put(c.getComponentId(), new SnapshotResponse(
-                                new BWFLAException("Execution of " + c.getComponentId() + " failed: Component Status is FAILED.")));
-                    }
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                    saveEnvironmentTasks.put(c.getComponentId(), new SnapshotResponse(
-                            new BWFLAException("Execution of " + c.getComponentId() + " failed: Component Status is FAILED.")));
-                }
-            }
-        });
+		this.componentsToComplete.removeIf(
+				component -> {
+					try {
+						ComponentResponse response = endpoint.getState(component);
+						String componentState = ((ComponentStateResponse) response).getState();
+						if (componentState.equals(ComponentState.STOPPED.name())) {
+							stopEnvironment(endpoint, log, component);
+							return true;
+						}
+						else if (componentState.equals(ComponentState.FAILED.name())) {
+							outputTasks.put(component, "Execution of " + component + " failed: Component Status is FAILED.");
+							return true;
+						}
+						return false;
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+						outputTasks.put(component, "Execution of " + component + " failed: " + e);
+						return true;
+					}
+				}
+		);
 
-        this.componentsToSave.removeIf(
-                component -> {
-                    SnapshotResponse t = saveEnvironmentTasks.get(component.getComponentId());
-                    return t != null;
-                }
-        );
+		this.componentsToSave.forEach(c -> {
+			SnapshotResponse t = saveEnvironmentTasks.get(c.getComponentId());
+			if (t == null) {
+				try {
+					ComponentResponse response = endpoint.getState(c.getComponentId());
+					String componentState = ((ComponentStateResponse) response).getState();
+					if (componentState.equals(ComponentState.STOPPED.name())) {
+						saveEnvironment(endpoint, c);
+					}
+					else if (componentState.equals(ComponentState.FAILED.name())) {
+						saveEnvironmentTasks.put(c.getComponentId(), new SnapshotResponse(
+								new BWFLAException("Execution of " + c.getComponentId() + " failed: Component Status is FAILED.")));
+					}
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+					saveEnvironmentTasks.put(c.getComponentId(), new SnapshotResponse(
+							new BWFLAException("Execution of " + c.getComponentId() + " failed: Component Status is FAILED.")));
+				}
+			}
+		});
 
-        if (componentsToComplete.isEmpty() && componentsToSave.isEmpty()) {
-            isFinished = true;
-        }
-    }
+		this.componentsToSave.removeIf(
+				component -> {
+					SnapshotResponse t = saveEnvironmentTasks.get(component.getComponentId());
+					return t != null;
+				}
+		);
 
-    private void stopEnvironment(Components endpoint, Logger log, String component) {
-        var stopResponse = endpoint.stop(component, null);
-        this.outputTasks.put(component, stopResponse.getUrl());
-        log.info(" Got response from stopping component (to complete): " + stopResponse.getUrl());
-    }
+		if (componentsToComplete.isEmpty() && componentsToSave.isEmpty()) {
+			isFinished = true;
+		}
+	}
 
-    private void saveEnvironment(Components endpoint, ComputeRequest.ComponentSpec c) {
-        SaveNewEnvironmentRequest request = new SaveNewEnvironmentRequest();
-        request.setEnvId(c.getEnvironmentId());
-        request.setTitle(c.getSaveEnvironmentLabel());
-        request.setCleanRemovableDrives(true);
-        try {
-            saveEnvironmentTasks.put(c.getComponentId(), endpoint.snapshot(c.getComponentId(), request, userContext));
-        } catch (Exception e) {
-            e.printStackTrace();
-            BWFLAException error = e instanceof BWFLAException ? (BWFLAException) e : new BWFLAException(e);
-            saveEnvironmentTasks.put(c.getEnvironmentId(), new SnapshotResponse(error));
-        }
-    }
+	private void stopEnvironment(Components endpoint, Logger log, String component)
+	{
+		var stopResponse = endpoint.stop(component, null);
+		this.outputTasks.put(component, stopResponse.getUrl());
+		log.info(" Got response from stopping component (to complete): " + stopResponse.getUrl());
+	}
+
+	private void saveEnvironment(Components endpoint, ComputeRequest.ComponentSpec c)
+	{
+		System.out.println("In headless Session, saveEnvironment");
+		SaveNewEnvironmentRequest request = new SaveNewEnvironmentRequest();
+		request.setEnvId(c.getEnvironmentId());
+		request.setTitle(c.getSaveEnvironmentLabel());
+		request.setCleanRemovableDrives(true);
+		try {
+
+			if (saveEnvironmentTasks.get(c.getComponentId()) == null){
+				saveEnvironmentTasks.put(c.getComponentId(), new SnapshotResponse("PLACEHOLDER!"));
+				saveEnvironmentTasks.put(c.getComponentId(), sendSaveEnvironmentRequest(c.getComponentId(), request, userContext));
+			}
+			else{
+				System.out.println("--------------- Trying to put something in saveEnvTasks for " + c.getComponentId() + "but something already exists!");
+			}
+
+			//saveEnvironmentTasks.put(c.getComponentId(), endpoint.snapshot2(c.getComponentId(), request, userContext));
+
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			BWFLAException error = e instanceof BWFLAException ? (BWFLAException) e : new BWFLAException(e);
+			saveEnvironmentTasks.put(c.getEnvironmentId(), new SnapshotResponse(error));
+		}
+	}
+
+	private SnapshotResponse sendSaveEnvironmentRequest(String componentId, SaveNewEnvironmentRequest body, UserContext userContext) throws BWFLAException
+	{
+		var client = ClientBuilder.newClient();
+		var baseUrl = "http://eaas:8080/emil";
+		var target = client.target(baseUrl);
+
+		Invocation.Builder request = target
+				.path("components/" + componentId + "/snapshot")
+				.queryParam("access_token", userContext.getToken())
+				.request(MediaType.APPLICATION_JSON_TYPE);
+		Response response = request.post(Entity.entity(body, MediaType.APPLICATION_JSON_TYPE));
+
+		if (Response.Status.fromStatusCode(response.getStatus()) == Response.Status.OK) {
+			return response.readEntity(SnapshotResponse.class);
+		}
+		else {
+			throw new BWFLAException("Snapshot did no return 200 but " + response.getStatus());
+		}
+
+	}
 }

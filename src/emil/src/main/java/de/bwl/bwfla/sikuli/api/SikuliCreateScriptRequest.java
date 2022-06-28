@@ -3,6 +3,7 @@ package de.bwl.bwfla.sikuli.api;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -38,7 +39,7 @@ public class SikuliCreateScriptRequest {
         private Map<String, Object> images;
 
         @JsonProperty("elements")
-        private Map<String, Object> elements;
+        private List<Object> elements;
 
         public Map<String, Object> getImages() {
             return images;
@@ -49,11 +50,11 @@ public class SikuliCreateScriptRequest {
         }
 
 
-        public Map<String, Object> getElements() {
+        public List<Object> getElements() {
             return elements;
         }
 
-        public void setElements(Map<String, Object> elements) {
+        public void setElements(List<Object> elements) {
             this.elements = elements;
         }
 

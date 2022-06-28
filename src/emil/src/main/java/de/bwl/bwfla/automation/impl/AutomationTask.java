@@ -14,11 +14,13 @@ import java.nio.file.Path;
 
 public class AutomationTask extends BlockingTask<Object>
 {
+	private final String token;
 	private AutomationRequest request;
 
-	public AutomationTask(AutomationRequest request)
+	public AutomationTask(AutomationRequest request, String token)
 	{
 		this.request = request;
+		this.token = token;
 	}
 
 	@Override
@@ -69,6 +71,10 @@ public class AutomationTask extends BlockingTask<Object>
 
 		if (Files.exists(Path.of("/tmp-storage/automation/automation_config.json"))) {
 			automationScriptRunner.addArguments("-c", "/tmp-storage/automation/automation_config.json");
+		}
+		if (token != null){
+			log.info("Adding token to python script!");
+			automationScriptRunner.addArguments("-a", token);
 		}
 
 		if (automationScriptRunner.execute(true)) {

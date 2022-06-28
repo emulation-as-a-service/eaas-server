@@ -57,6 +57,10 @@ public class AutomationRequest
 	@JsonProperty("outputParameter")
 	private String outputParameter;
 
+	//sikuli only
+	@JsonProperty("customOutputs")
+	private ArrayList<String> customOutputs;
+
 	public AutomationRequest()
 	{
 	}
@@ -209,5 +213,15 @@ public class AutomationRequest
 	public void setOutputParameter(String outputParameter)
 	{
 		this.outputParameter = outputParameter;
+	}
+
+	public ArrayList<String> getCustomOutputs()
+	{
+		return customOutputs;
+	}
+
+	public void setCustomOutputs(ArrayList<String> customOutputs)
+	{
+		this.customOutputs = customOutputs;
 	}
 }
