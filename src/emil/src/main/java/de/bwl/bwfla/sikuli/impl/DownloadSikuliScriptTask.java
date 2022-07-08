@@ -26,7 +26,7 @@ public class DownloadSikuliScriptTask extends BlockingTask<Object> {
     protected Object execute() throws Exception {
 
         log.info("Compressing Sikuli Script and uploading to Blobstore...");
-        Path tmpPath = SikuliUtils.getWorkingDirForComponent(request.getComponentId(), log);
+        Path tmpPath = Path.of(SikuliUtils.getRuncListInformationForComponent(request.getComponentId(), log).getBundle());
 
         DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
         tarRunner.setLogger(log);

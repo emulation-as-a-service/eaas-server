@@ -36,7 +36,7 @@ public class CreateSikuliAutomationTask extends BlockingTask<Object> {
 
         Path workingDir;
         try {
-            workingDir = SikuliUtils.getWorkingDirForComponent(request.getComponentId(), log);
+            workingDir = Path.of(SikuliUtils.getRuncListInformationForComponent(request.getComponentId(), log).getBundle());
         } catch (Exception e) {
             throw new BWFLAException("Could not get working directory for component " + request.getComponentId(), e);
         }

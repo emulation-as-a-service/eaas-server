@@ -6,9 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import de.bwl.bwfla.apiutils.WaitQueueCreatedResponse;
 import de.bwl.bwfla.apiutils.WaitQueueResponse;
-import de.bwl.bwfla.automation.api.AllAutomationsResponse;
-import de.bwl.bwfla.automation.api.AutomationConfigurationRequest;
-import de.bwl.bwfla.automation.api.AutomationRequest;
+import de.bwl.bwfla.automation.api.*;
 import de.bwl.bwfla.automation.impl.AutomationTask;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
@@ -67,7 +65,7 @@ public class AutomationAPI
 		java.nio.file.Path path = java.nio.file.Path.of("/tmp-storage/automation");
 		if (Files.notExists(path)) {
 			Files.createDirectory(path);
-			//Files.createDirectory(path.resolve("sikuli"));
+			Files.createDirectory(path.resolve("sikuli"));
 		}
 
 		else {
@@ -78,6 +76,8 @@ public class AutomationAPI
 			var p = new File("/tmp-storage/automation");
 
 			Files.createDirectory(p.toPath());
+			Files.createDirectory(path.resolve("sikuli"));
+
 		}
 		//FileUtils.cleanDirectory(new File("/tmp-storage/automation"));
 
@@ -104,10 +104,40 @@ public class AutomationAPI
 			var mapper = new ObjectMapper().enable(JsonParser.Feature.ALLOW_COMMENTS)
 					.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
 					.registerModule(new JaxbAnnotationModule());
-			var configData = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationRequest.class);
-
 
 			AllAutomationsResponse.AutomationResult result = new AllAutomationsResponse.AutomationResult();
+			result.setId(taskId);
+
+			boolean readSuccessfully = false;
+
+
+			try {
+
+				AutomationTemplateRequest configData = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationTemplateRequest.class);
+				LOG.info("Successfully read AutomationTemplateRequest for task " + taskId);
+
+
+				result.setAutomationType(configData.getAutomationType());
+				result.setExecutable(configData.getExecutableLocation());
+				result.setOriginalEnvId(configData.getTargetId());
+			}
+			catch (Exception e){
+				LOG.info("Could not read config file as AutomationTemplateRequest, will try AutomationSikuliRequest ...");
+			}
+
+
+			if (!readSuccessfully) {
+				try {
+					AutomationSikuliRequest configData2 = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationSikuliRequest.class);
+					LOG.info("Successfully read AutomationSikuliRequest for task " + taskId);
+
+
+					result.setOriginalEnvId(configData2.getTargetId());
+				}
+				catch (Exception e) {
+					LOG.warning("Could not read config file for task " + taskId + " as Sikuli either!");
+				}
+			}
 
 			if (info.result().isCompletedExceptionally()) {
 				result.setError(true);
@@ -129,12 +159,6 @@ public class AutomationAPI
 
 
 			File resultFile = new File("/tmp-storage/automation/" + taskId + "/status.json");
-
-			result.setId(taskId);
-			result.setAutomationType(configData.getAutomationType());
-			result.setExecutable(configData.getExecutableLocation());
-			result.setOriginalEnvId(configData.getEnvironmentId());
-
 			if (resultFile.exists()) {
 
 				var pyResult =
@@ -203,9 +227,8 @@ public class AutomationAPI
 	@Secured(roles = {Role.PUBLIC})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response postExecute(AutomationRequest request, @Context UriInfo uri)
+	public Response postExecute(AutomationBaseRequest request, @Context UriInfo uri)
 	{
-
 
 
 		final String taskID;
@@ -223,6 +246,31 @@ public class AutomationAPI
 
 
 	}
+
+	@POST
+	@Path("/sikuli")
+	@Secured(roles = {Role.PUBLIC})
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response postExecuteInAlreadyRunningComponent(AutomationBaseRequest request, @Context UriInfo uri)
+	{
+
+		final String taskID;
+		try {
+			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser.getToken()));
+
+			automations.add(taskID);
+		}
+		catch (Throwable throwable) {
+			LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
+			return ResponseUtils.createInternalErrorResponse(throwable);
+		}
+
+		return createWaitQueue(uri, taskID, "executions");
+
+
+	}
+
 
 	@GET
 	@Path("/waitqueue/{id}")

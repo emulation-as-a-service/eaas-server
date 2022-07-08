@@ -28,6 +28,9 @@ public class NetworkEnvironmentElement {
     @XmlElement(required = false)
     private boolean wildcard;
 
+    @XmlElement(required = false)
+    private boolean hasOutput;
+
     @XmlElement(required = true)
     private String label;
 
@@ -36,6 +39,14 @@ public class NetworkEnvironmentElement {
 
     @XmlElement
     private String fqdn;
+
+    public boolean isHasOutput() {
+        return hasOutput;
+    }
+
+    public void setHasOutput(boolean hasOutput) {
+        this.hasOutput = hasOutput;
+    }
 
     public String getEnvId() {
         return envId;
