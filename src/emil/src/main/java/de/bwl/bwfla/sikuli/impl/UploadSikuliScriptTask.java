@@ -24,7 +24,7 @@ public class UploadSikuliScriptTask extends BlockingTask<Object> {
 
         log.info("Starting Sikuli Upload Task...");
 
-        Path tmpPath = SikuliUtils.getWorkingDirForComponent(request.getComponentId(), log);
+        Path tmpPath = Path.of(SikuliUtils.getRuncListInformationForComponent(request.getComponentId(), log).getBundle());
 
         String blobStoreUrl = request.getBlobStoreUrl();
         extractTar(tmpPath, blobStoreUrl);

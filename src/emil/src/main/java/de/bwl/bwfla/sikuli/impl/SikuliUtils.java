@@ -16,7 +16,7 @@ public class SikuliUtils {
 
     private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile(".*/[\\w\\d-]+\\.sikuli/[\\w\\d-]+\\.py");
 
-    public static Path getWorkingDirForComponent(String componentId, Logger logger) throws Exception {
+    public static RuncListInformation getRuncListInformationForComponent(String componentId, Logger logger) throws Exception {
         logger.info("Getting directory for component: " + componentId);
         DeprecatedProcessRunner runcListRunner = new DeprecatedProcessRunner("sudo");
         runcListRunner.addArguments("runc", "list", "--format", "json");
@@ -27,14 +27,14 @@ public class SikuliUtils {
         ObjectMapper runcMapper = new ObjectMapper();
         List<RuncListInformation> myObjects = Arrays.asList(runcMapper.readValue(output, RuncListInformation[].class));
 
-        Optional<String> tmpPathOpt = myObjects.stream().filter(e -> e.getId().equals(componentId)).findFirst().map(RuncListInformation::getBundle);
+        Optional<RuncListInformation> tmpPathOpt = myObjects.stream().filter(e -> e.getId().equals(componentId)).findFirst(); //.map(RuncListInformation::getBundle);
 
         if (tmpPathOpt.isEmpty()) {
             throw new BWFLAException("Could not find session for given ID: " + componentId);
         }
 
-        logger.info("Returning: " + tmpPathOpt.get());
-        return Path.of(tmpPathOpt.get());
+        //logger.info("Returning: " + tmpPathOpt.get());
+        return tmpPathOpt.get();
     }
 
     public static Path getSikuliFilenameForDirectory(Path directory) throws Exception {

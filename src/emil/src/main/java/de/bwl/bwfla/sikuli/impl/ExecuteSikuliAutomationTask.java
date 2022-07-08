@@ -5,9 +5,6 @@ import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.sikuli.api.SikuliExecutionRequest;
 
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.core.Response;
 import java.nio.file.Path;
 
 
@@ -28,16 +25,20 @@ public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
 		log.info("Executing Sikuli Script...");
 
 		int x, y;
-		if (request.getResolution() != null) {
-			log.info("Got custom resolution...");
-			x = request.getResolution().getX();
-			y = request.getResolution().getY();
-		}
-		else {
-			log.info("Resolution not specified, defaulting to 1024x768");
-			x = 1024;
-			y = 768;
-		}
+//		if (request.getResolution() != null) {
+//			log.info("Got custom resolution...");
+//			x = request.getResolution().getX();
+//			y = request.getResolution().getY();
+//		}
+//		else {
+//			log.info("Resolution not specified, defaulting to 1280x1024");
+//			x = 1280;
+//			y = 1024;
+//		}
+
+		log.info("Resolution not specified, defaulting to 1280x1024");
+		x = 1280;
+		y = 1024;
 
 
 		log.info("Setting resolution to x: " + x + ", y: " + y);
@@ -61,7 +62,9 @@ public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
 
 		Thread.sleep(1000);
 
-		Path tmpPath = SikuliUtils.getWorkingDirForComponent(request.getComponentId(), log);
+		RuncListInformation info = SikuliUtils.getRuncListInformationForComponent(request.getComponentId(), log);
+
+		Path tmpPath = Path.of(info.getBundle());
 		Path scriptPathAppserver = SikuliUtils.getSikuliFilenameForDirectory(tmpPath.resolve("data/uploads"));
 
 		Path parentDir = scriptPathAppserver.getParent();
@@ -83,7 +86,19 @@ public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
 			sikuliRunner.addArguments("--", "DEBUG");
 		}
 
-		if (sikuliRunner.execute(true)) {
+		boolean success = sikuliRunner.execute(true);
+
+		DeprecatedProcessRunner screenshotRunner = new DeprecatedProcessRunner("sudo");
+		screenshotRunner.addArgument("/libexec/findSikuliScreenshots.sh");
+		screenshotRunner.addArgument(info.getPid());
+		screenshotRunner.addArgument(parentName.toString());
+		screenshotRunner.addArgument(getTaskId());
+//		screenshotRunner.addArguments("find", "/proc/" + info.getPid() + "/root/emucon/data/uploads/alfrescoX.sikuli",
+//				"-name", "'sc*.png'", "-exec cp -prv '{}' '/tmp-storage/automation' ';'");
+		screenshotRunner.execute();
+
+
+		if (success) {
 			log.info("--------------- SUCCESSFULLY EXECUTED SIKULI SCRIPT! -----------------");
 			//Files.createFile(Path.of("/tmp/automation/sikuli/done.txt"));
 			log.info("Created done.txt!");
@@ -105,15 +120,17 @@ public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
 
 	public int stopComponentAfterExecution()
 	{
-		log.info("Stopping Component after Sikuli Execution");
-		var target = ClientBuilder.newClient().target("http://eaas:8080/emil");
-
-		Invocation.Builder restRequest = target.path("/components/" + request.getComponentId() + "/stop").request();
-
-		Response response = restRequest.get();
-		log.info("Stopping returned: " + response.getStatus());
-
-		return response.getStatus();
+		//TODO do this only if status is not stopped already!!!!
+		return 0;
+//		log.info("Stopping Component after Sikuli Execution");
+//		var target = ClientBuilder.newClient().target("http://eaas:8080/emil");
+//
+//		Invocation.Builder restRequest = target.path("/components/" + request.getComponentId() + "/stop").request();
+//
+//		Response response = restRequest.get();
+//		log.info("Stopping returned: " + response.getStatus());
+//
+//		return response.getStatus();
 
 	}
 }

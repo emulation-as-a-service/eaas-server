@@ -1,7 +1,9 @@
 package de.bwl.bwfla.automation.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.bwl.bwfla.automation.api.AutomationRequest;
+import de.bwl.bwfla.automation.api.AutomationBaseRequest;
+import de.bwl.bwfla.automation.api.AutomationSikuliRequest;
+import de.bwl.bwfla.automation.api.AutomationTemplateRequest;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
@@ -15,9 +17,9 @@ import java.nio.file.Path;
 public class AutomationTask extends BlockingTask<Object>
 {
 	private final String token;
-	private AutomationRequest request;
+	private AutomationBaseRequest request;
 
-	public AutomationTask(AutomationRequest request, String token)
+	public AutomationTask(AutomationBaseRequest request, String token)
 	{
 		this.request = request;
 		this.token = token;
@@ -33,30 +35,40 @@ public class AutomationTask extends BlockingTask<Object>
 		Files.createDirectory(pathOf.resolve("files"));
 
 
-		if (request.isSikuliOnly()) {
-			log.info("Sikuli Automation only!");
+		boolean isSikuliTask = false;
+
+		if (request.getClass().equals(AutomationSikuliRequest.class)) {
+			log.info("Got AutomationSikuliRequest...");
+			isSikuliTask = true;
 		}
 
-		else if (request.getAutomationType().equals("migration")) {
-			var x = request.getAllFiles();
-			for (var file : x) {
-				String filePath = taskPath + "/files/" + file.getName();
-				curlToFileFromBlobstore(filePath, file.getUrl());
+		else if (request.getClass().equals(AutomationTemplateRequest.class)) {
+			log.info("Got AutomationTemplateRequest...");
 
-				if (file.getAction().equals(ImageContentDescription.Action.EXTRACT)) {
-					extractTar(Path.of(taskPath + "/files"), filePath);
-					Files.delete(Path.of(filePath));
+			if (((AutomationTemplateRequest) request).getAutomationType().equals("migration")) {
+				var allFiles = ((AutomationTemplateRequest) request).getAllFiles();
+				for (var file : allFiles) {
+					String filePath = taskPath + "/files/" + file.getName();
+					curlToFileFromBlobstore(filePath, file.getUrl());
+
+					if (file.getAction().equals(ImageContentDescription.Action.EXTRACT)) {
+						extractTar(Path.of(taskPath + "/files"), filePath);
+						Files.delete(Path.of(filePath));
+					}
 				}
+			}
+
+			else {
+
+				String filePath = taskPath + "/files/" + ((AutomationTemplateRequest) request).getFileName();
+				curlToFileFromBlobstore(filePath, ((AutomationTemplateRequest) request).getFilePath());
+
+				((AutomationTemplateRequest) request).setFilePath(filePath);
 			}
 		}
 
 		else {
-
-//			String filePath = taskPath + "/files/input." + request.getFileType();
-			String filePath = taskPath + "/files/" + request.getFileName();
-			curlToFileFromBlobstore(filePath, request.getFilePath());
-
-			request.setFilePath(filePath);
+			throw new BWFLAException("Could not read request, was neither AutomationTemplateRequest nor AutomationSikuliRequest!");
 		}
 
 		ObjectMapper mapper = new ObjectMapper();
@@ -72,7 +84,12 @@ public class AutomationTask extends BlockingTask<Object>
 		if (Files.exists(Path.of("/tmp-storage/automation/automation_config.json"))) {
 			automationScriptRunner.addArguments("-c", "/tmp-storage/automation/automation_config.json");
 		}
-		if (token != null){
+
+		if (isSikuliTask) {
+			automationScriptRunner.addArgument("--sikuli");
+		}
+
+		if (token != null) {
 			log.info("Adding token to python script!");
 			automationScriptRunner.addArguments("-a", token);
 		}

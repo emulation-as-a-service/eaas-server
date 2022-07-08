@@ -1026,7 +1026,27 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				throw new BWFLAException("Disk seems to be not partitioned!");
 
 			LOG.info("separating data by partition");
+			LOG.info("---------------------------------------------");
+			for (DiskDescription.Partition partition1 : disk.getPartitions()) {
+				LOG.info("FS Type: " + partition1.getFileSystemType());
+				LOG.info("Index: " + partition1.getIndex());
+				LOG.info("Part name: " + partition1.getPartitionName());
+				LOG.info("Flags: " + partition1.getFlags());
+
+			}
+
 			for (DiskDescription.Partition partition : disk.getPartitions()) {
+				LOG.info("Starting rsync process for: " + partition.getIndex() + ", " + partition.getPartitionName());
+
+				//FIXME remove hack
+				if (disk.getPartitions().size() > 1){
+					LOG.info("Found multiple partitions!");
+					if (partition.getFlags() != null && partition.getFlags().contains("boot")){
+						LOG.info("Skipping boot Partition!");
+						continue;
+					}
+				}
+
 				if (!partition.hasFileSystemType()) {
 					LOG.info("Partition " + partition.getIndex() + " is not formatted, skip");
 					continue;
@@ -1053,8 +1073,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				final Path outputDir = this.getWorkingDir().resolve("partition-" + partition.getIndex());
 
 				LOG.info("Executing RSYNC to determine changed files...");
+
+				LOG.info("Comparing: " + lowerDir.toAbsolutePath());
+				LOG.info("With: " + upperDir.toAbsolutePath());
+				LOG.info("Output is stored at: " + outputDir.toAbsolutePath());
 				DeprecatedProcessRunner processRunner = new DeprecatedProcessRunner("rsync");
-				processRunner.addArguments("-armxv"); //, "--progress"); when using --progress, rsync sometimes hangs...
+				//processRunner.addArguments("-L", "--safe-links"); //NFTS links?
+				processRunner.addArguments("-armxv", "--no-l"); //, "--progress"); when using --progress, rsync sometimes hangs...
 				processRunner.addArguments("--exclude", "dev");
 				processRunner.addArguments("--exclude", "proc");
 				processRunner.addArguments("--compare-dest=" + lowerDir.toAbsolutePath().toString() + "/",
@@ -1063,7 +1088,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				processRunner.execute(true);
 				processRunner.cleanup();
 
-				LOG.info("Done with rsync!");
+				LOG.info("Done with rsync for: " + partition.getIndex() + ", " + partition.getPartitionName());
 
 
 				partitionFiles.add(outputDir);
