@@ -3,10 +3,12 @@ package de.bwl.bwfla.emil.datatypes;
 import javax.xml.bind.annotation.*;
 
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonValue;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.rest.NetworkingType;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
@@ -77,6 +79,9 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private boolean shutdownByOs = false;
 
 	@XmlElement(required = false)
+	private OutputType hasOutput;
+
+	@XmlElement(required = false)
 	private EmilEnvironmentOwner owner;
 
 	@XmlElement(required = false)
@@ -93,6 +98,21 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	@XmlElement
 	private String helpText;
+
+	public enum OutputType{
+
+		YES("yes"),
+		NO("no"),
+		ASK("ask");
+
+		@JsonValue
+		public final String value;
+
+		OutputType(String value){
+			this.value = value;
+		}
+
+	}
 
 	public EmilEnvironment(EmilEnvironment template)
 	{
@@ -116,6 +136,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		networking = template.networking;
 		helpText = template.helpText;
 		deleted = template.deleted;
+		hasOutput = template.hasOutput;
 	}
 
 	/*
@@ -226,6 +247,16 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public void setEnablePrinting(boolean enablePrinting) {
 		this.enablePrinting = enablePrinting;
+	}
+
+	public OutputType getHasOutput()
+	{
+		return hasOutput;
+	}
+
+	public void setHasOutput(OutputType hasOutput)
+	{
+		this.hasOutput = hasOutput;
 	}
 
 	@Override

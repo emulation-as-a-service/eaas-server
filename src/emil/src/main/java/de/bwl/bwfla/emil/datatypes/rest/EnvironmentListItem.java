@@ -57,6 +57,9 @@ public class EnvironmentListItem {
     @XmlElement
     private boolean serviceContainer;
 
+    @XmlElement
+    private EmilEnvironment.OutputType hasOutput;
+
     public EnvironmentListItem(EmilEnvironment emilenv) {
 
         this.envId =  emilenv.getEnvId();
@@ -67,6 +70,7 @@ public class EnvironmentListItem {
         this.timestamp = emilenv.getTimestamp();
         this.operatingSystem = emilenv.getOs();
         this.description = emilenv.getDescription();
+        this.hasOutput = emilenv.getHasOutput();
 
         if (emilenv.getNetworking() != null) {
             this.networkEnabled = (emilenv.getNetworking().isConnectEnvs() || emilenv.getNetworking().isEnableInternet() || emilenv.getNetworking().isServerMode() || emilenv.getNetworking().isLocalServerMode());
@@ -198,5 +202,15 @@ public class EnvironmentListItem {
 
     public boolean isServiceContainer() {
         return serviceContainer;
+    }
+
+    public EmilEnvironment.OutputType getHasOutput()
+    {
+        return hasOutput;
+    }
+
+    public void setHasOutput(EmilEnvironment.OutputType hasOutput)
+    {
+        this.hasOutput = hasOutput;
     }
 }

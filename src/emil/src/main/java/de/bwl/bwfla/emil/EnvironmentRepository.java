@@ -648,6 +648,7 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setShutdownByOs(envReq.isShutdownByOs());
 				newEmilEnv.setXpraEncoding(envReq.getXpraEncoding());
 				newEmilEnv.setOs(envReq.getOperatingSystemId());
+				newEmilEnv.setHasOutput(envReq.getHasOutput());
 
 				if(envReq.isEnableNetwork())
 				{
@@ -828,6 +829,7 @@ public class EnvironmentRepository extends EmilRest
 			newenv.setXpraEncoding(desc.getXpraEncoding());
 			newenv.setLinuxRuntime(desc.isLinuxRuntime());
 			newenv.setHelpText(desc.getHelpText());
+			newenv.setHasOutput(desc.getHasOutput());
 
 			if (desc.getTime() != null)
 				newenv.setTimeContext(desc.getTime());

@@ -5,6 +5,7 @@ import javax.xml.bind.annotation.XmlElement;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EnvironmentCreateRequest;
 import de.bwl.bwfla.emucomp.api.Drive;
 
@@ -37,6 +38,7 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean canProcessAdditionalFiles;
 	private List<Drive> drives;
 	private boolean linuxRuntime;
+	private EmilEnvironment.OutputType hasOutput;
 
 	private List<EnvironmentCreateRequest.DriveSetting> driveSettings;
 
@@ -193,5 +195,15 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setDriveSettings(List<EnvironmentCreateRequest.DriveSetting> driveSettings) {
 		this.driveSettings = driveSettings;
+	}
+
+	public EmilEnvironment.OutputType getHasOutput()
+	{
+		return hasOutput;
+	}
+
+	public void setHasOutput(EmilEnvironment.OutputType hasOutput)
+	{
+		this.hasOutput = hasOutput;
 	}
 }

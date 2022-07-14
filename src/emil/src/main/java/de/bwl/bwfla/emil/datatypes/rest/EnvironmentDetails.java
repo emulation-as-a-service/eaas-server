@@ -106,6 +106,9 @@ public class EnvironmentDetails {
 
     @XmlElement private String timestamp;
 
+    @XmlElement(defaultValue = "no")
+    private EmilEnvironment.OutputType hasOutput;
+
     /* Object Environments */
 
     @XmlElement
@@ -171,6 +174,12 @@ public class EnvironmentDetails {
         this.linuxRuntime = emilenv.isLinuxRuntime();
         this.helpText = emilenv.getHelpText();
         this.timestamp = emilenv.getTimestamp();
+        this.hasOutput = emilenv.getHasOutput();
+
+        if(emilenv.getHasOutput() != null)
+            System.out.println("----- " + emilenv.getHasOutput().value + " env Id: " + this.envId);
+        else
+            System.out.println("-----" + "Output was null for env " + this.envId);
 
         if(machineConf != null)
             this.drives = machineConf.getDrive();
@@ -410,6 +419,11 @@ public class EnvironmentDetails {
     public String getTimestamp()
     {
         return timestamp;
+    }
+
+    public EmilEnvironment.OutputType getHasOutput()
+    {
+        return hasOutput;
     }
 
     public String getObjectId()

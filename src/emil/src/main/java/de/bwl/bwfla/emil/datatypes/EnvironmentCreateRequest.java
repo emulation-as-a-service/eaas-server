@@ -45,6 +45,7 @@ public class EnvironmentCreateRequest extends JaxbType{
 	private String operatingSystemId;
 	private boolean enableNetwork;
 	private boolean enableInternet;
+	private EmilEnvironment.OutputType hasOutput;
 
 
 	public List<DriveSetting> getDriveSettings() {
@@ -133,6 +134,16 @@ public class EnvironmentCreateRequest extends JaxbType{
 
 	public boolean isEnableInternet() {
 		return enableInternet;
+	}
+
+	public EmilEnvironment.OutputType getHasOutput()
+	{
+		return hasOutput;
+	}
+
+	public void setHasOutput(EmilEnvironment.OutputType hasOutput)
+	{
+		this.hasOutput = hasOutput;
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown=true)
