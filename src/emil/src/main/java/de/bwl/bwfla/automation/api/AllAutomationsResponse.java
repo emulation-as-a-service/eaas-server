@@ -1,23 +1,27 @@
 package de.bwl.bwfla.automation.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AllAutomationsResponse
 {
 	@JsonProperty("results")
 	private ArrayList<AutomationResult> results;
 
-
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class PythonResultFile
 	{
 		@JsonProperty("automationType")
 		private String automationType;
-		@JsonProperty("result")
 
+		@JsonProperty("result")
 		private String result;
+
+		@JsonProperty("sikuliTaskId")
+		private String sikuliTaskId;
 
 		public PythonResultFile()
 		{
@@ -43,9 +47,19 @@ public class AllAutomationsResponse
 		{
 			this.result = result;
 		}
+
+		public String getSikuliTaskId()
+		{
+			return sikuliTaskId;
+		}
+
+		public void setSikuliTaskId(String sikuliTaskId)
+		{
+			this.sikuliTaskId = sikuliTaskId;
+		}
 	}
 
-
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class AutomationResult
 	{
 
@@ -73,8 +87,26 @@ public class AllAutomationsResponse
 		@JsonProperty("error")
 		private boolean error;
 
+		@JsonProperty("sikuliTaskId")
+		private String sikuliTaskId;
+
 		public AutomationResult()
 		{
+		}
+
+		public void setDone(boolean done)
+		{
+			isDone = done;
+		}
+
+		public String getSikuliTaskId()
+		{
+			return sikuliTaskId;
+		}
+
+		public void setSikuliTaskId(String sikuliTaskId)
+		{
+			this.sikuliTaskId = sikuliTaskId;
 		}
 
 		public String getAutomationType()

@@ -4,10 +4,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
+import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.apiutils.WaitQueueCreatedResponse;
 import de.bwl.bwfla.apiutils.WaitQueueResponse;
 import de.bwl.bwfla.automation.api.*;
 import de.bwl.bwfla.automation.impl.AutomationTask;
+import de.bwl.bwfla.blobstore.api.BlobDescription;
+import de.bwl.bwfla.blobstore.api.BlobHandle;
+import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
@@ -15,8 +19,11 @@ import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.emil.datatypes.rest.ProcessResultUrl;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.restutils.ResponseUtils;
+import org.apache.tamaya.Configuration;
+import org.apache.tamaya.ConfigurationProvider;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -49,7 +56,10 @@ public class AutomationAPI
 
 	private final TaskManager taskmgr;
 
-	private final ArrayList<String> automations;
+	private ArrayList<String> automations;
+
+	private final java.nio.file.Path automationBasePath = java.nio.file.Path.of("/tmp-storage/automation");
+
 
 	public AutomationAPI() throws BWFLAException, IOException
 	{
@@ -60,12 +70,17 @@ public class AutomationAPI
 			throw new BWFLAException("Initializing Automation API failed!", error);
 		}
 
+		resetAutomations();
+
+	}
+
+	private void resetAutomations() throws IOException, BWFLAException
+	{
 		automations = new ArrayList<>();
 
-		java.nio.file.Path path = java.nio.file.Path.of("/tmp-storage/automation");
-		if (Files.notExists(path)) {
-			Files.createDirectory(path);
-			Files.createDirectory(path.resolve("sikuli"));
+		if (Files.notExists(automationBasePath)) {
+			Files.createDirectory(automationBasePath);
+			Files.createDirectory(automationBasePath.resolve("sikuli"));
 		}
 
 		else {
@@ -76,13 +91,19 @@ public class AutomationAPI
 			var p = new File("/tmp-storage/automation");
 
 			Files.createDirectory(p.toPath());
-			Files.createDirectory(path.resolve("sikuli"));
-
+			Files.createDirectory(automationBasePath.resolve("sikuli"));
 		}
-		//FileUtils.cleanDirectory(new File("/tmp-storage/automation"));
-
 	}
 
+	@DELETE
+	@Path("/automations")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response clearAutomations(@Context UriInfo uri) throws IOException, BWFLAException
+	{
+		resetAutomations();
+		return Response.ok().build();
+	}
 
 	@GET
 	@Path("/automations")
@@ -121,7 +142,7 @@ public class AutomationAPI
 				result.setExecutable(configData.getExecutableLocation());
 				result.setOriginalEnvId(configData.getTargetId());
 			}
-			catch (Exception e){
+			catch (Exception e) {
 				LOG.info("Could not read config file as AutomationTemplateRequest, will try AutomationSikuliRequest ...");
 			}
 
@@ -140,6 +161,7 @@ public class AutomationAPI
 			}
 
 			if (info.result().isCompletedExceptionally()) {
+				//TODO this does not always trigger on error - fix python script
 				result.setError(true);
 				result.setStatus("Error");
 				result.setResult("Error");
@@ -165,6 +187,11 @@ public class AutomationAPI
 						new ObjectMapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
 				//result.setIsDone(true);
 				result.setResult(pyResult.getResult());
+
+				if (null != pyResult.getSikuliTaskId()) {
+					result.setSikuliTaskId(pyResult.getSikuliTaskId());
+				}
+
 			}
 
 			resultList.add(result);
@@ -177,6 +204,46 @@ public class AutomationAPI
 		return Response.ok(response).build();
 	}
 
+	@GET
+	@Path("/debug/{id}")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public ProcessResultUrl getSikuliDebugScreenshots(@PathParam("id") String id) throws BWFLAException
+	{
+		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
+		tarRunner.setWorkingDirectory(automationBasePath.resolve("sikuli"));
+		tarRunner.addArguments("-zcvf", "sikuliDebug" + id + ".tgz", id);
+		tarRunner.execute(true);
+
+		final Configuration config = ConfigurationProvider.getConfiguration();
+		final BlobStore blobstore = BlobStoreClient.get()
+				.getBlobStorePort(config.get("ws.blobstore"));
+		final String blobStoreAddress = config.get("rest.blobstore");
+
+		final BlobDescription blob = new BlobDescription()
+				.setDescription("SikuliX Debug Screenshots")
+				.setNamespace("SikuliX")
+				.setDataFromFile(automationBasePath.resolve("sikuli").resolve("sikuliDebug" + id + ".tgz"))
+				.setType(".tgz")
+				.setName("sikuliDebug" + id);
+
+		BlobHandle handle = blobstore.put(blob);
+
+		//TODO remove tar gz?
+		try {
+			Files.delete(automationBasePath.resolve("sikuli").resolve("sikuliDebug" + id + ".tgz"));
+		}
+		catch (IOException e) {
+			System.out.println("Could not delete file!");
+		}
+
+		ProcessResultUrl returnResult = new ProcessResultUrl();
+		returnResult.setUrl(handle.toRestUrl(blobStoreAddress));
+
+		System.out.println("Returning: " + returnResult.getUrl());
+
+		return returnResult;
+	}
 
 	@POST
 	@Path("/config")
@@ -229,7 +296,6 @@ public class AutomationAPI
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response postExecute(AutomationBaseRequest request, @Context UriInfo uri)
 	{
-
 
 		final String taskID;
 		try {
