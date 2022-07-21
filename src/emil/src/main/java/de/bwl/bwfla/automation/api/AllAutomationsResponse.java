@@ -23,6 +23,9 @@ public class AllAutomationsResponse
 		@JsonProperty("sikuliTaskId")
 		private String sikuliTaskId;
 
+		@JsonProperty("hasError")
+		private boolean hasError;
+
 		public PythonResultFile()
 		{
 
@@ -56,6 +59,16 @@ public class AllAutomationsResponse
 		public void setSikuliTaskId(String sikuliTaskId)
 		{
 			this.sikuliTaskId = sikuliTaskId;
+		}
+
+		public boolean isHasError()
+		{
+			return hasError;
+		}
+
+		public void setHasError(boolean hasError)
+		{
+			this.hasError = hasError;
 		}
 	}
 

@@ -201,6 +201,9 @@ public class NetworkRequest extends JaxbType {
     @XmlElement
     private TcpGatewayConfig tcpGatewayConfig;
 
+    @XmlElement(required = false)
+    private int lifetime;
+
     public List<ComponentSpec> getComponents() {
         return components;
     }
@@ -235,5 +238,15 @@ public class NetworkRequest extends JaxbType {
 
     public void setTcpGatewayConfig(TcpGatewayConfig tcpGatewayConfig) {
         this.tcpGatewayConfig = tcpGatewayConfig;
+    }
+
+    public Integer getLifetime()
+    {
+        return lifetime;
+    }
+
+    public void setLifetime(Integer lifetime)
+    {
+        this.lifetime = lifetime;
     }
 }

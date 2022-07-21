@@ -13,11 +13,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-public class CreateSikuliAutomationTask extends BlockingTask<Object> {
+public class CreateSikuliTask extends BlockingTask<Object> {
 
     private final SikuliCreateScriptRequest request;
 
-    public CreateSikuliAutomationTask(SikuliCreateScriptRequest request) {
+    public CreateSikuliTask(SikuliCreateScriptRequest request) {
         this.request = request;
     }
 

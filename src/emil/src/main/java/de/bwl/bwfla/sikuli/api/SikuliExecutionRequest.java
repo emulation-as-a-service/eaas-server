@@ -3,6 +3,9 @@ package de.bwl.bwfla.sikuli.api;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.ArrayList;
+
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SikuliExecutionRequest {
     public SikuliExecutionRequest() {
@@ -16,6 +19,9 @@ public class SikuliExecutionRequest {
 
     @JsonProperty("resolution")
     private Resolution resolution;
+
+    @JsonProperty("parameters")
+    private ArrayList<String> parameters;
 
     public String getComponentId() {
         return componentId;
@@ -39,6 +45,16 @@ public class SikuliExecutionRequest {
 
     public void setResolution(Resolution resolution) {
         this.resolution = resolution;
+    }
+
+    public ArrayList<String> getParameters()
+    {
+        return parameters;
+    }
+
+    public void setParameters(ArrayList<String> parameters)
+    {
+        this.parameters = parameters;
     }
 
     public class Resolution {

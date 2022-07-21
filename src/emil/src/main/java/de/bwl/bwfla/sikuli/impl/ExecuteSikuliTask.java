@@ -8,12 +8,12 @@ import de.bwl.bwfla.sikuli.api.SikuliExecutionRequest;
 import java.nio.file.Path;
 
 
-public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
+public class ExecuteSikuliTask extends BlockingTask<Object>
 {
 
 	private final SikuliExecutionRequest request;
 
-	public ExecuteSikuliAutomationTask(SikuliExecutionRequest request)
+	public ExecuteSikuliTask(SikuliExecutionRequest request)
 	{
 		this.request = request;
 	}
@@ -25,20 +25,16 @@ public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
 		log.info("Executing Sikuli Script...");
 
 		int x, y;
-//		if (request.getResolution() != null) {
-//			log.info("Got custom resolution...");
-//			x = request.getResolution().getX();
-//			y = request.getResolution().getY();
-//		}
-//		else {
-//			log.info("Resolution not specified, defaulting to 1280x1024");
-//			x = 1280;
-//			y = 1024;
-//		}
-
-		log.info("Resolution not specified, defaulting to 1280x1024");
-		x = 1280;
-		y = 1024;
+		if (request.getResolution() != null) {
+			log.info("Got custom resolution...");
+			x = request.getResolution().getX();
+			y = request.getResolution().getY();
+		}
+		else {
+			log.info("Resolution not specified, defaulting to 1280x1024");
+			x = 1280;
+			y = 1024;
+		}
 
 
 		log.info("Setting resolution to x: " + x + ", y: " + y);
@@ -84,6 +80,11 @@ public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
 
 		if (DEBUG) {
 			sikuliRunner.addArguments("--", "DEBUG");
+
+			//TODO separate from DEBUG
+			if (request.getParameters() != null && !request.getParameters().isEmpty()) {
+				sikuliRunner.addArguments(request.getParameters());
+			}
 		}
 
 		boolean success = sikuliRunner.execute(true);
@@ -101,10 +102,10 @@ public class ExecuteSikuliAutomationTask extends BlockingTask<Object>
 		if (success) {
 			log.info("--------------- SUCCESSFULLY EXECUTED SIKULI SCRIPT! -----------------");
 			//Files.createFile(Path.of("/tmp/automation/sikuli/done.txt"));
-			log.info("Created done.txt!");
+			//log.info("Created done.txt!");
 
 			if (request.isHeadless()) {
-				Thread.sleep(60000); //TODO properly check if component has shutdown correctly
+				//Thread.sleep(60000); //TODO properly check if component has shutdown correctly
 				stopComponentAfterExecution();
 			}
 

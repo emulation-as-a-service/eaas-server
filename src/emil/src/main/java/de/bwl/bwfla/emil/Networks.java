@@ -112,9 +112,20 @@ public class Networks {
                     .add(new SessionComponent(switchId));
 
             DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-            
+
             sessions.register(session);
-            sessions.setLifetime(session.id(), Long.parseLong(retain_session), TimeUnit.MINUTES,
+
+            long lifetimeToSet;
+            if (networkRequest.getLifetime() != null && networkRequest.getLifetime() != 0){
+                LOG.info("Request specified custom lifetime: "  + networkRequest.getLifetime());
+                lifetimeToSet = networkRequest.getLifetime();
+            }
+            else{
+                LOG.info("Setting lifetime to (default) " + Long.parseLong(retain_session) + " Minutes!");
+                lifetimeToSet =  Long.parseLong(retain_session);
+            }
+
+            sessions.setLifetime(session.id(), lifetimeToSet, TimeUnit.MINUTES,
                     "autodetached session @ " + dateFormat.format(new Date()));
 
             networkResponse = new NetworkResponse(session.id());

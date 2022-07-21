@@ -95,10 +95,11 @@ public class AutomationTask extends BlockingTask<Object>
 		}
 
 		if (automationScriptRunner.execute(true)) {
-			return "Successfully executed automation task";
+			return "Successfully executed automation task!";
 		}
 		else {
-			throw new RuntimeException("Error while executing automation task " + getTaskId());
+			log.warning("Python automation script did not return code 0!");
+			throw new BWFLAException("Error while executing automation task " + getTaskId());
 		}
 
 	}

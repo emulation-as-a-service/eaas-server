@@ -1082,6 +1082,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				processRunner.addArguments("-armxv", "--no-l"); //, "--progress"); when using --progress, rsync sometimes hangs...
 				processRunner.addArguments("--exclude", "dev");
 				processRunner.addArguments("--exclude", "proc");
+				processRunner.addArguments("--exclude", "*.sys");
 				processRunner.addArguments("--compare-dest=" + lowerDir.toAbsolutePath().toString() + "/",
 						upperDir.toAbsolutePath().toString() + "/",
 						outputDir.toAbsolutePath().toString());
