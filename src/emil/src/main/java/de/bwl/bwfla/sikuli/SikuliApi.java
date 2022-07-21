@@ -12,9 +12,9 @@ import de.bwl.bwfla.sikuli.api.SikuliCreateScriptRequest;
 import de.bwl.bwfla.sikuli.api.SikuliDownloadRequest;
 import de.bwl.bwfla.sikuli.api.SikuliExecutionRequest;
 import de.bwl.bwfla.sikuli.api.SikuliUploadRequest;
-import de.bwl.bwfla.sikuli.impl.CreateSikuliAutomationTask;
+import de.bwl.bwfla.sikuli.impl.CreateSikuliTask;
 import de.bwl.bwfla.sikuli.impl.DownloadSikuliScriptTask;
-import de.bwl.bwfla.sikuli.impl.ExecuteSikuliAutomationTask;
+import de.bwl.bwfla.sikuli.impl.ExecuteSikuliTask;
 import de.bwl.bwfla.sikuli.impl.UploadSikuliScriptTask;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -51,7 +51,7 @@ public class SikuliApi {
 
         final String taskID;
         try {
-            taskID = taskmgr.submit(new CreateSikuliAutomationTask(request));
+            taskID = taskmgr.submit(new CreateSikuliTask(request));
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);
@@ -70,7 +70,7 @@ public class SikuliApi {
 
         final String taskID;
         try {
-            taskID = taskmgr.submit(new ExecuteSikuliAutomationTask(request));
+            taskID = taskmgr.submit(new ExecuteSikuliTask(request));
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);
@@ -141,15 +141,27 @@ public class SikuliApi {
             response.setId(id);
             response.setResultUrl(userdata.getResultLocation());
 
-            if (info.result().isDone()) {
-                // Result is available!
-                response.setStatus("Done");
-                response.setDone(true);
-            } else {
-                // Result is not yet available!
-                response.setStatus("Processing");
-                response.setDone(false);
+
+            if (info.result().isCompletedExceptionally()) {
+                //TODO this does not always trigger on error - fix python script
+                response.setHasError(true);
+                response.setStatus("Error");
             }
+
+            else{
+                response.setHasError(false);
+                if (info.result().isDone()) {
+                    // Result is available!
+                    response.setStatus("Done");
+                    response.setDone(true);
+                } else {
+                    // Result is not yet available!
+                    response.setStatus("Processing");
+                    response.setDone(false);
+                }
+            }
+
+
             return ResponseUtils.createResponse(status, response);
         } catch (Throwable throwable) {
             return ResponseUtils.createInternalErrorResponse(throwable);

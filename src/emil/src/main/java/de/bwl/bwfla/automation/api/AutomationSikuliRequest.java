@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 @XmlType(name = "AutomationSikuliRequest")
 public class AutomationSikuliRequest extends AutomationBaseRequest
@@ -17,6 +18,11 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 	//sikuli only
 	@JsonProperty("customOutputs")
 	protected ArrayList<String> customOutputs;
+
+
+
+	@JsonProperty("sikuliParams")
+	private ArrayList<String> sikuliParams;
 
 	@JsonProperty("resolutionX")
 	protected int resolutionX;
@@ -66,5 +72,15 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 	public void setResolutionY(int resolutionY)
 	{
 		this.resolutionY = resolutionY;
+	}
+
+	public ArrayList<String> getSikuliParams()
+	{
+		return sikuliParams;
+	}
+
+	public void setSikuliParams(ArrayList<String> sikuliParams)
+	{
+		this.sikuliParams = sikuliParams;
 	}
 }

@@ -187,6 +187,11 @@ public class AutomationAPI
 						new ObjectMapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
 				//result.setIsDone(true);
 				result.setResult(pyResult.getResult());
+				if(pyResult.isHasError()){
+					result.setStatus("Error");
+					result.setResult("Error");
+					result.setError(true);
+				}
 
 				if (null != pyResult.getSikuliTaskId()) {
 					result.setSikuliTaskId(pyResult.getSikuliTaskId());
