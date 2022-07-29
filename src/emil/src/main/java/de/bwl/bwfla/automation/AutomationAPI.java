@@ -38,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -109,7 +110,7 @@ public class AutomationAPI
 	@Path("/automations")
 	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getAllAutomations(@Context UriInfo uri) throws IOException
+	public Response getAllAutomations(@Context UriInfo uri) throws IOException, ExecutionException, InterruptedException
 	{
 
 		ArrayList<AllAutomationsResponse.AutomationResult> resultList = new ArrayList<>();
@@ -151,8 +152,6 @@ public class AutomationAPI
 				try {
 					AutomationSikuliRequest configData2 = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationSikuliRequest.class);
 					LOG.info("Successfully read AutomationSikuliRequest for task " + taskId);
-
-
 					result.setOriginalEnvId(configData2.getTargetId());
 				}
 				catch (Exception e) {
@@ -160,8 +159,9 @@ public class AutomationAPI
 				}
 			}
 
+			boolean resultSet = false;
+
 			if (info.result().isCompletedExceptionally()) {
-				//TODO this does not always trigger on error - fix python script
 				result.setError(true);
 				result.setStatus("Error");
 				result.setResult("Error");
@@ -171,6 +171,8 @@ public class AutomationAPI
 				// Result is available!
 				result.setStatus("Done");
 				result.setIsDone(true);
+				result.setResult((String) info.result().get());
+				resultSet = true;
 			}
 			else {
 				// Result is not yet available!
@@ -180,13 +182,15 @@ public class AutomationAPI
 			}
 
 
+			//TODO read this in actual automation task...
 			File resultFile = new File("/tmp-storage/automation/" + taskId + "/status.json");
 			if (resultFile.exists()) {
 
 				var pyResult =
 						new ObjectMapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
-				//result.setIsDone(true);
-				result.setResult(pyResult.getResult());
+				if (!resultSet){
+					result.setResult(pyResult.getResult());
+				}
 				if(pyResult.isHasError()){
 					result.setStatus("Error");
 					result.setResult("Error");
