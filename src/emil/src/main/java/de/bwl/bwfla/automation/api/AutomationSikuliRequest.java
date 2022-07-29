@@ -19,8 +19,6 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 	@JsonProperty("customOutputs")
 	protected ArrayList<String> customOutputs;
 
-
-
 	@JsonProperty("sikuliParams")
 	private ArrayList<String> sikuliParams;
 

@@ -5,7 +5,9 @@ import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.sikuli.api.SikuliExecutionRequest;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 
 public class ExecuteSikuliTask extends BlockingTask<Object>
@@ -87,22 +89,38 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 			}
 		}
 
-		boolean success = sikuliRunner.execute(true);
 
+		Optional<DeprecatedProcessRunner.Result> result = sikuliRunner.executeWithResult(true);
+		String output = result.get().stdout();
+		boolean success = result.get().successful();
+
+		try {
+			log.info("Writing: " + output);
+			Path logDir = Path.of("/tmp-storage/automation/sikuli/" + getTaskId());
+			if (!Files.exists(logDir)) {
+				Files.createDirectories(logDir);
+
+			}
+			Files.createFile(logDir.resolve("logs.txt"));
+			Files.writeString(logDir.resolve("logs.txt"), output);
+			log.info("Successfully wrote logs to: " + logDir.resolve("logs.txt"));
+		}
+		catch (Exception e) {
+			log.warning("Could not write to sikuli log file: " + e.getMessage());
+		}
+
+
+		//TODO error if dir already exists
 		DeprecatedProcessRunner screenshotRunner = new DeprecatedProcessRunner("sudo");
 		screenshotRunner.addArgument("/libexec/findSikuliScreenshots.sh");
 		screenshotRunner.addArgument(info.getPid());
 		screenshotRunner.addArgument(parentName.toString());
 		screenshotRunner.addArgument(getTaskId());
-//		screenshotRunner.addArguments("find", "/proc/" + info.getPid() + "/root/emucon/data/uploads/alfrescoX.sikuli",
-//				"-name", "'sc*.png'", "-exec cp -prv '{}' '/tmp-storage/automation' ';'");
 		screenshotRunner.execute();
 
 
 		if (success) {
 			log.info("--------------- SUCCESSFULLY EXECUTED SIKULI SCRIPT! -----------------");
-			//Files.createFile(Path.of("/tmp/automation/sikuli/done.txt"));
-			//log.info("Created done.txt!");
 
 			if (request.isHeadless()) {
 				//Thread.sleep(60000); //TODO properly check if component has shutdown correctly

@@ -1,13 +1,20 @@
 package de.bwl.bwfla.automation.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.bwl.bwfla.api.blobstore.BlobStore;
+import de.bwl.bwfla.automation.api.AllAutomationsResponse;
 import de.bwl.bwfla.automation.api.AutomationBaseRequest;
 import de.bwl.bwfla.automation.api.AutomationSikuliRequest;
 import de.bwl.bwfla.automation.api.AutomationTemplateRequest;
+import de.bwl.bwfla.blobstore.api.BlobDescription;
+import de.bwl.bwfla.blobstore.api.BlobHandle;
+import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
+import org.apache.tamaya.Configuration;
+import org.apache.tamaya.ConfigurationProvider;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -26,7 +33,7 @@ public class AutomationTask extends BlockingTask<Object>
 	}
 
 	@Override
-	protected Object execute() throws Exception
+	protected String execute() throws Exception
 	{
 
 		String taskPath = "/tmp-storage/automation/" + getTaskId();
@@ -95,14 +102,52 @@ public class AutomationTask extends BlockingTask<Object>
 		}
 
 		if (automationScriptRunner.execute(true)) {
-			return "Successfully executed automation task!";
+			log.info("Successfully executed automation task!");
+
+			File resultFile = new File("/tmp-storage/automation/" + getTaskId() + "/status.json");
+			var pyResult =
+					new ObjectMapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
+
+			if (pyResult.getAutomationType().equals("environment")) {
+				return pyResult.getResult();
+			}
+			else {
+				Path outputPath = Path.of("/tmp-storage/automation").resolve(getTaskId()).resolve("result.tgz");
+				if (Files.exists(outputPath)) {
+
+					log.info("Got output folder: " + outputPath);
+
+					final Configuration config = ConfigurationProvider.getConfiguration();
+					final BlobStore blobstore = BlobStoreClient.get()
+							.getBlobStorePort(config.get("ws.blobstore"));
+					final String blobStoreAddress = config.get("rest.blobstore");
+
+					final BlobDescription blob = new BlobDescription()
+							.setDescription("Result of Automation Task " + getTaskId())
+							.setNamespace("automation")
+							.setDataFromFile(outputPath)
+							.setType(".tgz")
+							.setName("output");
+
+					BlobHandle handle = blobstore.put(blob);
+
+					log.info("Blobstore URL: " + handle.toRestUrl(blobStoreAddress));
+
+					return handle.toRestUrl(blobStoreAddress);
+				}
+				else {
+					log.warning("Result is set to 'files', however no output was found at " + outputPath);
+					throw new BWFLAException("Error while executing automation task " + getTaskId());
+				}
+
+			}
 		}
 		else {
 			log.warning("Python automation script did not return code 0!");
 			throw new BWFLAException("Error while executing automation task " + getTaskId());
 		}
-
 	}
+
 
 	private void curlToFileFromBlobstore(String filePath, String url) throws BWFLAException
 	{
@@ -123,4 +168,13 @@ public class AutomationTask extends BlockingTask<Object>
 			throw new BWFLAException("failed to extract tar");
 	}
 
+	private void tarOutputFolder(String dirToTar, String resultPath, Path workingDir) throws BWFLAException
+	{
+		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
+		pr.setLogger(log);
+		pr.setWorkingDirectory(workingDir);
+		pr.addArguments("tar", "czvf", resultPath, dirToTar);
+		if (!pr.execute(true))
+			throw new BWFLAException("failed to extract tar");
+	}
 }

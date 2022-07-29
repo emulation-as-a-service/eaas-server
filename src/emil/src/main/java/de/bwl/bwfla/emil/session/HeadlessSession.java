@@ -7,6 +7,7 @@ import de.bwl.bwfla.emil.datatypes.ComputeRequest;
 import de.bwl.bwfla.emil.datatypes.ComputeResponse;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentResponse;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentStateResponse;
+import de.bwl.bwfla.emil.datatypes.rest.ProcessResultUrl;
 import de.bwl.bwfla.emil.datatypes.rest.SnapshotResponse;
 import de.bwl.bwfla.emil.datatypes.snapshot.SaveNewEnvironmentRequest;
 import de.bwl.bwfla.emucomp.api.ComponentState;
@@ -117,7 +118,14 @@ public class HeadlessSession extends Session
 		else {
 			log.warning("Found ongoing components, will force shutdown and try to save/export Output");
 
-			componentsToComplete.forEach(component -> stopEnvironment(endpoint, log, component));
+			componentsToComplete.forEach(component -> {
+				try {
+					stopEnvironment(endpoint, log, component);
+				}
+				catch (BWFLAException e) {
+					throw new RuntimeException(e);
+				}
+			});
 			componentsToSave.forEach(c -> saveEnvironment(endpoint, c));
 
 		}
@@ -188,9 +196,9 @@ public class HeadlessSession extends Session
 		}
 	}
 
-	private void stopEnvironment(Components endpoint, Logger log, String component)
+	private void stopEnvironment(Components endpoint, Logger log, String component) throws BWFLAException
 	{
-		var stopResponse = endpoint.stop(component, null);
+		var stopResponse = sendEnvironmentStopRequest(component);
 		this.outputTasks.put(component, stopResponse.getUrl());
 		log.info(" Got response from stopping component (to complete): " + stopResponse.getUrl());
 	}
@@ -204,11 +212,11 @@ public class HeadlessSession extends Session
 		request.setCleanRemovableDrives(true);
 		try {
 
-			if (saveEnvironmentTasks.get(c.getComponentId()) == null){
+			if (saveEnvironmentTasks.get(c.getComponentId()) == null) {
 				saveEnvironmentTasks.put(c.getComponentId(), new SnapshotResponse("PLACEHOLDER!"));
 				saveEnvironmentTasks.put(c.getComponentId(), sendSaveEnvironmentRequest(c.getComponentId(), request, userContext));
 			}
-			else{
+			else {
 				System.out.println("--------------- Trying to put something in saveEnvTasks for " + c.getComponentId() + "but something already exists!");
 			}
 
@@ -240,6 +248,25 @@ public class HeadlessSession extends Session
 		else {
 			throw new BWFLAException("Snapshot did no return 200 but " + response.getStatus());
 		}
-
 	}
+
+	private ProcessResultUrl sendEnvironmentStopRequest(String componentId) throws BWFLAException
+	{
+		var client = ClientBuilder.newClient();
+		var baseUrl = "http://eaas:8080/emil";
+		var target = client.target(baseUrl);
+
+		Invocation.Builder request = target
+				.path("components/" + componentId + "/stop")
+				.queryParam("access_token", userContext.getToken()).request();
+		Response response = request.get();
+
+		if (Response.Status.fromStatusCode(response.getStatus()) == Response.Status.OK) {
+			return response.readEntity(ProcessResultUrl.class);
+		}
+		else {
+			throw new BWFLAException("Snapshot did no return 200 but " + response.getStatus());
+		}
+	}
+
 }
