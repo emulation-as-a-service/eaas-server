@@ -21,6 +21,7 @@ package de.bwl.bwfla.common.taskmanager;
 
 import de.bwl.bwfla.common.logging.PrefixLogger;
 
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -28,6 +29,9 @@ import java.util.concurrent.Executor;
 public abstract class AbstractTask<R> implements Runnable
 {
 	protected final PrefixLogger log;
+
+	protected Instant startTime;
+	protected Instant endTime;
 
 	private final CompletableFuture<R> result;
 
@@ -81,5 +85,15 @@ public abstract class AbstractTask<R> implements Runnable
 		log.getContext()
 		   .add("TASK-" + taskid)
 		   .update();
+	}
+
+	public Instant getStartTime()
+	{
+		return startTime;
+	}
+
+	public Instant getEndTime()
+	{
+		return endTime;
 	}
 }

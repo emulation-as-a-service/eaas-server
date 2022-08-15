@@ -20,6 +20,7 @@
 package de.bwl.bwfla.common.taskmanager;
 
 
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -38,9 +39,12 @@ public abstract class BlockingTask<R> extends AbstractTask<R>
 	{
 		final CompletableFuture<R> result = this.getTaskResult();
 		try {
+			startTime = Instant.now();
 			result.complete(this.execute());
+			endTime = Instant.now();
 		}
 		catch (Exception error) {
+			endTime = Instant.now();
 			result.completeExceptionally(error);
 		}
 

@@ -15,6 +15,9 @@ import java.util.ArrayList;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class AutomationBaseRequest
 {
+	@JsonProperty("name")
+	protected String name;
+
 	@JsonProperty("targetId")
 	protected String targetId;
 
@@ -31,9 +34,18 @@ public abstract class AutomationBaseRequest
 	@JsonProperty("timeout")
 	protected int timeout;
 
-
 	public AutomationBaseRequest()
 	{
+	}
+
+	public String getName()
+	{
+		return name;
+	}
+
+	public void setName(String name)
+	{
+		this.name = name;
 	}
 
 	public String getTargetId()

@@ -4,10 +4,11 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.sikuli.api.SikuliExecutionRequest;
+import org.apache.commons.io.IOUtils;
 
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 
 
 public class ExecuteSikuliTask extends BlockingTask<Object>
@@ -76,7 +77,7 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 		sikuliRunner.setLogger(log);
 		sikuliRunner.addArguments(
 				"runc", "exec", "-e", "DISPLAY=:7000", "-e", "LD_PRELOAD=", request.getComponentId(),
-				"java", "-jar", "/sikulix.jar", "-r", scriptPathContainer.toString());
+				"java", "-jar", "/sikulix.jar", "-c", "-r", scriptPathContainer.toString());
 
 		boolean DEBUG = true; //TODO request
 
@@ -89,28 +90,41 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 			}
 		}
 
+		//Optional<DeprecatedProcessRunner.Result> result = sikuliRunner.executeWithResult(true);
 
-		Optional<DeprecatedProcessRunner.Result> result = sikuliRunner.executeWithResult(true);
-		String output = result.get().stdout();
-		boolean success = result.get().successful();
+		if (!sikuliRunner.start())
+			throw new BWFLAException("Starting untar failed!");
+		int success;
 
-		try {
-			log.info("Writing: " + output);
-			Path logDir = Path.of("/tmp-storage/automation/sikuli/" + getTaskId());
-			if (!Files.exists(logDir)) {
-				Files.createDirectories(logDir);
+		log.info("--------- Starting reader! -----------");
 
+
+		Path logDir = Path.of("/tmp-storage/automation/sikuli/" + getTaskId());
+		if (!Files.exists(logDir)) {
+			Files.createDirectories(logDir);
+		}
+		Path logPath = Files.createFile(logDir.resolve("logs.txt"));
+		File sikuliLogFile = new File(logPath.toUri());
+
+		try (InputStreamReader reader = (InputStreamReader) sikuliRunner.getStdOutReader();
+			 OutputStream outputStream = new FileOutputStream(sikuliLogFile)) {
+
+			while (!sikuliRunner.isProcessFinished()) {
+				IOUtils.copy(reader, outputStream);
 			}
-			Files.createFile(logDir.resolve("logs.txt"));
-			Files.writeString(logDir.resolve("logs.txt"), output);
-			log.info("Successfully wrote logs to: " + logDir.resolve("logs.txt"));
 		}
-		catch (Exception e) {
-			log.warning("Could not write to sikuli log file: " + e.getMessage());
+		catch (IOException error) {
+			throw new BWFLAException("Extracting tar archive failed!", error);
 		}
 
+		success = sikuliRunner.waitUntilFinished();
+		sikuliRunner.cleanup();
 
-		//TODO error if dir already exists
+
+//		String output = result.get().stdout();
+//		boolean success = result.get().successful();
+//
+//
 		DeprecatedProcessRunner screenshotRunner = new DeprecatedProcessRunner("sudo");
 		screenshotRunner.addArgument("/libexec/findSikuliScreenshots.sh");
 		screenshotRunner.addArgument(info.getPid());
@@ -119,7 +133,7 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 		screenshotRunner.execute();
 
 
-		if (success) {
+		if (success == 0) {
 			log.info("--------------- SUCCESSFULLY EXECUTED SIKULI SCRIPT! -----------------");
 
 			if (request.isHeadless()) {

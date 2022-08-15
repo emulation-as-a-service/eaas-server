@@ -5,11 +5,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AllAutomationsResponse
 {
 	@JsonProperty("results")
 	private ArrayList<AutomationResult> results;
+
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class PythonResultFile
@@ -72,9 +74,13 @@ public class AllAutomationsResponse
 		}
 	}
 
+
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public static class AutomationResult
 	{
+
+		@JsonProperty("name")
+		private String name;
 
 		@JsonProperty("automationType")
 		private String automationType;
@@ -103,8 +109,30 @@ public class AllAutomationsResponse
 		@JsonProperty("sikuliTaskId")
 		private String sikuliTaskId;
 
+		@JsonProperty("logs")
+		private ArrayList<String> logs;
+
+		@JsonProperty("startedAt")
+		private String startedAt;
+
+		@JsonProperty("finishedAt")
+		private String finishedAt;
+
+		@JsonProperty("duration")
+		private String duration;
+
 		public AutomationResult()
 		{
+		}
+
+		public String getName()
+		{
+			return name;
+		}
+
+		public void setName(String name)
+		{
+			this.name = name;
 		}
 
 		public void setDone(boolean done)
@@ -200,6 +228,46 @@ public class AllAutomationsResponse
 		public void setError(boolean error)
 		{
 			this.error = error;
+		}
+
+		public ArrayList<String> getLogs()
+		{
+			return logs;
+		}
+
+		public void setLogs(ArrayList<String> logs)
+		{
+			this.logs = logs;
+		}
+
+		public String getStartedAt()
+		{
+			return startedAt;
+		}
+
+		public void setStartedAt(String startedAt)
+		{
+			this.startedAt = startedAt;
+		}
+
+		public String getFinishedAt()
+		{
+			return finishedAt;
+		}
+
+		public void setFinishedAt(String finishedAt)
+		{
+			this.finishedAt = finishedAt;
+		}
+
+		public String getDuration()
+		{
+			return duration;
+		}
+
+		public void setDuration(String duration)
+		{
+			this.duration = duration;
 		}
 	}
 
