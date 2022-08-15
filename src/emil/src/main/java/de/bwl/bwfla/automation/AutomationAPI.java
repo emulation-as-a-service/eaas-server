@@ -22,6 +22,8 @@ import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.emil.datatypes.rest.ProcessResultUrl;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.restutils.ResponseUtils;
+import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.apache.jena.atlas.logging.Log;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -37,6 +39,10 @@ import javax.ws.rs.core.UriInfo;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -117,11 +123,11 @@ public class AutomationAPI
 		for (String taskId : automations) {
 
 			final TaskInfo<Object> info = taskmgr.lookup(taskId);
+
 			if (info == null) {
 				LOG.warning("Could not find task " + taskId);
 				continue;
 			}
-
 
 			var mapper = new ObjectMapper().enable(JsonParser.Feature.ALLOW_COMMENTS)
 					.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
@@ -129,6 +135,28 @@ public class AutomationAPI
 
 			AllAutomationsResponse.AutomationResult result = new AllAutomationsResponse.AutomationResult();
 			result.setId(taskId);
+
+
+			Instant startTime;
+			Instant endTime;
+
+			var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss").withZone(ZoneId.of("UTC"));
+
+			if ((startTime = info.task().getStartTime()) != null) {
+				result.setStartedAt(formatter.format(startTime));
+
+				if ((endTime = info.task().getEndTime()) != null) {
+					result.setFinishedAt(formatter.format(endTime));
+					Duration duration = Duration.between(startTime, endTime);
+					result.setDuration(DurationFormatUtils.formatDuration(duration.toMillis(), "HH:mm:ss", true));
+				}
+				else {
+					result.setFinishedAt("---");
+					Duration duration = Duration.between(startTime, Instant.now());
+					result.setDuration(DurationFormatUtils.formatDuration(duration.toMillis(), "HH:mm:ss", true));
+				}
+			}
+
 
 			boolean readSuccessfully = false;
 
@@ -142,6 +170,7 @@ public class AutomationAPI
 				result.setAutomationType(configData.getAutomationType());
 				result.setExecutable(configData.getExecutableLocation());
 				result.setOriginalEnvId(configData.getTargetId());
+				result.setName(configData.getName());
 			}
 			catch (Exception e) {
 				LOG.info("Could not read config file as AutomationTemplateRequest, will try AutomationSikuliRequest ...");
@@ -153,6 +182,8 @@ public class AutomationAPI
 					AutomationSikuliRequest configData2 = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationSikuliRequest.class);
 					LOG.info("Successfully read AutomationSikuliRequest for task " + taskId);
 					result.setOriginalEnvId(configData2.getTargetId());
+					result.setName(configData2.getName());
+
 				}
 				catch (Exception e) {
 					LOG.warning("Could not read config file for task " + taskId + " as Sikuli either!");
@@ -181,17 +212,16 @@ public class AutomationAPI
 				result.setResult("---");
 			}
 
-
-			//TODO read this in actual automation task...
+			//TODO read this in actual automation task ?
 			File resultFile = new File("/tmp-storage/automation/" + taskId + "/status.json");
 			if (resultFile.exists()) {
 
 				var pyResult =
 						new ObjectMapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
-				if (!resultSet){
+				if (!resultSet) {
 					result.setResult(pyResult.getResult());
 				}
-				if(pyResult.isHasError()){
+				if (pyResult.isHasError()) {
 					result.setStatus("Error");
 					result.setResult("Error");
 					result.setError(true);
@@ -199,12 +229,16 @@ public class AutomationAPI
 
 				if (null != pyResult.getSikuliTaskId()) {
 					result.setSikuliTaskId(pyResult.getSikuliTaskId());
+
+					var logFilePath = java.nio.file.Path.of("/tmp-storage/automation/sikuli").resolve(pyResult.getSikuliTaskId()).resolve("logs.txt");
+
+					if (Files.exists(logFilePath)) {
+						ArrayList<String> lines = (ArrayList<String>) Files.readAllLines(logFilePath);
+						result.setLogs(lines);
+					}
 				}
-
 			}
-
 			resultList.add(result);
-
 		}
 
 		AllAutomationsResponse response = new AllAutomationsResponse();
@@ -309,7 +343,6 @@ public class AutomationAPI
 		final String taskID;
 		try {
 			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser.getToken()));
-
 			automations.add(taskID);
 		}
 		catch (Throwable throwable) {

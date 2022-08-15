@@ -19,6 +19,7 @@ import org.apache.tamaya.ConfigurationProvider;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 
 
 public class AutomationTask extends BlockingTask<Object>
@@ -36,13 +37,15 @@ public class AutomationTask extends BlockingTask<Object>
 	protected String execute() throws Exception
 	{
 
+		//request.setStartedAt("(UTC) " + Instant.now().toString);
+
 		String taskPath = "/tmp-storage/automation/" + getTaskId();
 		Path pathOf = Path.of(taskPath);
 		Files.createDirectory(pathOf);
 		Files.createDirectory(pathOf.resolve("files"));
 
-
 		boolean isSikuliTask = false;
+
 
 		if (request.getClass().equals(AutomationSikuliRequest.class)) {
 			log.info("Got AutomationSikuliRequest...");
