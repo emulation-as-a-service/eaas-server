@@ -176,11 +176,6 @@ public class EnvironmentDetails {
         this.timestamp = emilenv.getTimestamp();
         this.hasOutput = emilenv.getHasOutput();
 
-        if(emilenv.getHasOutput() != null)
-            System.out.println("----- " + emilenv.getHasOutput().value + " env Id: " + this.envId);
-        else
-            System.out.println("-----" + "Output was null for env " + this.envId);
-
         if(machineConf != null)
             this.drives = machineConf.getDrive();
         else
