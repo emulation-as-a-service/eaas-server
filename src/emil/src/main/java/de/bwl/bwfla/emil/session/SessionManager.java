@@ -100,7 +100,7 @@ public class SessionManager
 			}
 			else {
 				session.setLifetime(unit.toMillis(lifetime));
-				session.setExpirationTimestamp(unit.toMillis(lifetime) + timems()); // XXX needed if session is not running.
+				session.setExpirationTimestamp(unit.toMillis(lifetime) + timems()); // needed if session is not running.
 			}
 
 			if (title != null && title.getComponentName() != null) {

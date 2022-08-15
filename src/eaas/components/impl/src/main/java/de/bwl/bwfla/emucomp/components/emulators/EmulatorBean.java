@@ -1033,20 +1033,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			if (!disk.hasPartitions())
 				throw new BWFLAException("Disk seems to be not partitioned!");
 
-			LOG.info("separating data by partition");
-			LOG.info("---------------------------------------------");
-			for (DiskDescription.Partition partition1 : disk.getPartitions()) {
-				LOG.info("FS Type: " + partition1.getFileSystemType());
-				LOG.info("Index: " + partition1.getIndex());
-				LOG.info("Part name: " + partition1.getPartitionName());
-				LOG.info("Flags: " + partition1.getFlags());
-
-			}
-
 			for (DiskDescription.Partition partition : disk.getPartitions()) {
 				LOG.info("Starting rsync process for: " + partition.getIndex() + ", " + partition.getPartitionName());
 
-				//FIXME remove hack
+				//FIXME this works for my win 7 example, but
+				//FIXME the proper solution is to fix the mounting and iterate
 				if (disk.getPartitions().size() > 1){
 					LOG.info("Found multiple partitions!");
 					if (partition.getFlags() != null && partition.getFlags().contains("boot")){

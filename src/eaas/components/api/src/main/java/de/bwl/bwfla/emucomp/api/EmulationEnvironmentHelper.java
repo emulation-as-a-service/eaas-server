@@ -568,14 +568,15 @@ public class EmulationEnvironmentHelper {
 
                 String id = drive.getData().replace("binding://", "");
 
-                if (setBootDrive && drive.isBoot() || Objects.equals(idToSet, id)) {
-                    envConfig.setOutputBindingId(id);
-                    return;
-                }
-            }
-        }
-        log.warning("Could not find drive " + idToSet + ". Output will not be retrieved properly!");
-    }
+				if (setBootDrive && drive.isBoot() || Objects.equals(idToSet, id)) {
+					envConfig.setOutputBindingId(id);
+					return;
+				}
+			}
+		}
+		//TODO maybe stop execution? At least somethings needs to be shown to the user
+		log.warning("Could not find drive " + idToSet + ". Output will not be retrieved properly!");
+	}
 
 	/*
 	 * public static List<Resource> getIndirectBindings(EmulationEnvironment
