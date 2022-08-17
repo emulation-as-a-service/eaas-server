@@ -19,7 +19,6 @@ import org.apache.tamaya.ConfigurationProvider;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 
 
 public class AutomationTask extends BlockingTask<Object>
@@ -36,16 +35,12 @@ public class AutomationTask extends BlockingTask<Object>
 	@Override
 	protected String execute() throws Exception
 	{
-
-		//request.setStartedAt("(UTC) " + Instant.now().toString);
-
 		String taskPath = "/tmp-storage/automation/" + getTaskId();
 		Path pathOf = Path.of(taskPath);
 		Files.createDirectory(pathOf);
 		Files.createDirectory(pathOf.resolve("files"));
 
 		boolean isSikuliTask = false;
-
 
 		if (request.getClass().equals(AutomationSikuliRequest.class)) {
 			log.info("Got AutomationSikuliRequest...");
@@ -68,6 +63,8 @@ public class AutomationTask extends BlockingTask<Object>
 				}
 			}
 
+			// TODO introduce a separate class for the config file for the python script?
+			// TODO right now, the request gets modified (if necessary) and is then passed as the config file
 			else {
 
 				String filePath = taskPath + "/files/" + ((AutomationTemplateRequest) request).getFileName();
@@ -82,15 +79,16 @@ public class AutomationTask extends BlockingTask<Object>
 		}
 
 		ObjectMapper mapper = new ObjectMapper();
-		String configName = taskPath + "/config.json";
+		String configPath = taskPath + "/config.json";
 
-		log.info("Writing to file: " + mapper.writeValueAsString(request));
-		mapper.writeValue(new File(configName), request);
+		log.info("Writing to config file (" + configPath + "):" + mapper.writeValueAsString(request));
+		mapper.writeValue(new File(configPath), request);
 
 		DeprecatedProcessRunner automationScriptRunner = new DeprecatedProcessRunner("sudo");
 		automationScriptRunner.setWorkingDirectory(Path.of("/libexec/migration-templating"));
-		automationScriptRunner.addArguments("python3", "/libexec/migration-templating/main.py", configName, "-t", getTaskId());
+		automationScriptRunner.addArguments("python3", "/libexec/migration-templating/main.py", configPath, "-t", getTaskId());
 
+		//TODO make hardcoded path configurable
 		if (Files.exists(Path.of("/tmp-storage/automation/automation_config.json"))) {
 			automationScriptRunner.addArguments("-c", "/tmp-storage/automation/automation_config.json");
 		}
@@ -100,7 +98,7 @@ public class AutomationTask extends BlockingTask<Object>
 		}
 
 		if (token != null) {
-			log.info("Adding token to python script!");
+			log.info("Adding token to python script arguments!");
 			automationScriptRunner.addArguments("-a", token);
 		}
 
@@ -111,9 +109,12 @@ public class AutomationTask extends BlockingTask<Object>
 			var pyResult =
 					new ObjectMapper().readValue(resultFile, AllAutomationsResponse.PythonResultFile.class);
 
+			//if result is a new environment, simply return environment id
 			if (pyResult.getAutomationType().equals("environment")) {
 				return pyResult.getResult();
 			}
+			//otherwise upload the result files to the blobstore
+			//this is necessary, as the result that is uploaded by the python script can't be given a type and name
 			else {
 				Path outputPath = Path.of("/tmp-storage/automation").resolve(getTaskId()).resolve("result.tgz");
 				if (Files.exists(outputPath)) {
@@ -152,6 +153,7 @@ public class AutomationTask extends BlockingTask<Object>
 	}
 
 
+	//TODO move all these together with SikuliUtils into own class?
 	private void curlToFileFromBlobstore(String filePath, String url) throws BWFLAException
 	{
 		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");

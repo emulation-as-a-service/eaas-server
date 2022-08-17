@@ -572,7 +572,7 @@ public class EmilEnvironmentRepository implements IMigratable
 		EmilEnvironment env = getEmilEnvironmentById(envId);
 		if(env == null)
 			throw new BWFLAException("Environment " + envId + " is not available");
-		
+
 		if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
 			throw new BWFLAException("permission denied");
 
@@ -997,7 +997,6 @@ public class EmilEnvironmentRepository implements IMigratable
 	}
 
 	public EmilSessionEnvironment getUserSession(String userId, String objectId) {
-		System.out.println("userid: " + userId + " objectId " + objectId);
 		return sessions.get(userId, objectId);
 	}
 

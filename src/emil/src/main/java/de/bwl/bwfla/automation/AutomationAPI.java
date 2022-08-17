@@ -23,7 +23,6 @@ import de.bwl.bwfla.emil.datatypes.rest.ProcessResultUrl;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.restutils.ResponseUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.apache.jena.atlas.logging.Log;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -67,7 +66,6 @@ public class AutomationAPI
 
 	private final java.nio.file.Path automationBasePath = java.nio.file.Path.of("/tmp-storage/automation");
 
-
 	public AutomationAPI() throws BWFLAException, IOException
 	{
 		try {
@@ -76,30 +74,7 @@ public class AutomationAPI
 		catch (Exception error) {
 			throw new BWFLAException("Initializing Automation API failed!", error);
 		}
-
 		resetAutomations();
-
-	}
-
-	private void resetAutomations() throws IOException, BWFLAException
-	{
-		automations = new ArrayList<>();
-
-		if (Files.notExists(automationBasePath)) {
-			Files.createDirectory(automationBasePath);
-			Files.createDirectory(automationBasePath.resolve("sikuli"));
-		}
-
-		else {
-			DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
-			pr.addArguments("rm", "-rf", "/tmp-storage/automation");
-			if (!pr.execute(true))
-				throw new BWFLAException("Could not delete automation dir contents!");
-			var p = new File("/tmp-storage/automation");
-
-			Files.createDirectory(p.toPath());
-			Files.createDirectory(automationBasePath.resolve("sikuli"));
-		}
 	}
 
 	@DELETE
@@ -136,11 +111,10 @@ public class AutomationAPI
 			AllAutomationsResponse.AutomationResult result = new AllAutomationsResponse.AutomationResult();
 			result.setId(taskId);
 
-
 			Instant startTime;
 			Instant endTime;
 
-			var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss").withZone(ZoneId.of("UTC"));
+			var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"));
 
 			if ((startTime = info.task().getStartTime()) != null) {
 				result.setStartedAt(formatter.format(startTime));
@@ -157,36 +131,34 @@ public class AutomationAPI
 				}
 			}
 
-
 			boolean readSuccessfully = false;
-
 
 			try {
 
 				AutomationTemplateRequest configData = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationTemplateRequest.class);
-				LOG.info("Successfully read AutomationTemplateRequest for task " + taskId);
-
+				LOG.fine("Successfully read AutomationTemplateRequest for task " + taskId);
+				readSuccessfully = true;
 
 				result.setAutomationType(configData.getAutomationType());
 				result.setExecutable(configData.getExecutableLocation());
 				result.setOriginalEnvId(configData.getTargetId());
 				result.setName(configData.getName());
+
 			}
 			catch (Exception e) {
-				LOG.info("Could not read config file as AutomationTemplateRequest, will try AutomationSikuliRequest ...");
+				LOG.fine("Could not read config file as AutomationTemplateRequest, will try AutomationSikuliRequest ...");
 			}
-
 
 			if (!readSuccessfully) {
 				try {
 					AutomationSikuliRequest configData2 = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationSikuliRequest.class);
-					LOG.info("Successfully read AutomationSikuliRequest for task " + taskId);
+					LOG.fine("Successfully read AutomationSikuliRequest for task " + taskId);
 					result.setOriginalEnvId(configData2.getTargetId());
 					result.setName(configData2.getName());
 
 				}
 				catch (Exception e) {
-					LOG.warning("Could not read config file for task " + taskId + " as Sikuli either!");
+					LOG.warning("Could not read config file for task " + taskId + " as AutomationTemplateRequest or AutomationSikuliRequest!");
 				}
 			}
 
@@ -297,6 +269,7 @@ public class AutomationAPI
 	{
 		ObjectMapper mapper = new ObjectMapper();
 		String configName = "/tmp-storage/automation/automation_config.json";
+		//TODO make path configurable and properly use path everywhere
 
 		try {
 			mapper.writeValue(new File(configName), request);
@@ -308,29 +281,6 @@ public class AutomationAPI
 		return Response.ok().build();
 	}
 
-	@GET
-	@Path("/reset")
-	@Secured(roles = {Role.PUBLIC})
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response poll() throws BWFLAException, IOException
-	{
-
-		//FileUtils.cleanDirectory(new File("/tmp-storage/automation"));
-//			var p = new File("/tmp-storage/automation");
-//			FileUtils.deleteDirectory(p);
-//			Files.createDirectory(p.toPath());
-		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
-		pr.addArguments("rm", "-rf", "/tmp-storage/automation");
-		if (!pr.execute(true))
-			throw new BWFLAException("Could not delete automation dir contents!");
-		var p = new File("/tmp-storage/automation");
-
-		Files.createDirectory(p.toPath());
-
-		automations.clear();
-
-		return Response.ok().build();
-	}
 
 	@POST
 	@Path("/execute")
@@ -339,22 +289,11 @@ public class AutomationAPI
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response postExecute(AutomationBaseRequest request, @Context UriInfo uri)
 	{
-
-		final String taskID;
-		try {
-			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser.getToken()));
-			automations.add(taskID);
-		}
-		catch (Throwable throwable) {
-			LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
-			return ResponseUtils.createInternalErrorResponse(throwable);
-		}
-
-		return createWaitQueue(uri, taskID, "executions");
-
-
+		return startAutomationTask(request, uri);
 	}
 
+
+	//TODO remove this, as it does the same as /execute?
 	@POST
 	@Path("/sikuli")
 	@Secured(roles = {Role.PUBLIC})
@@ -362,21 +301,7 @@ public class AutomationAPI
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response postExecuteInAlreadyRunningComponent(AutomationBaseRequest request, @Context UriInfo uri)
 	{
-
-		final String taskID;
-		try {
-			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser.getToken()));
-
-			automations.add(taskID);
-		}
-		catch (Throwable throwable) {
-			LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
-			return ResponseUtils.createInternalErrorResponse(throwable);
-		}
-
-		return createWaitQueue(uri, taskID, "executions");
-
-
+		return startAutomationTask(request, uri);
 	}
 
 
@@ -477,6 +402,41 @@ public class AutomationAPI
 		}
 	}
 
+	private Response startAutomationTask(AutomationBaseRequest request, @Context UriInfo uri)
+	{
+		final String taskID;
+		try {
+			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser.getToken()));
+			automations.add(taskID);
+		}
+		catch (Throwable throwable) {
+			LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
+			return ResponseUtils.createInternalErrorResponse(throwable);
+		}
+
+		return createWaitQueue(uri, taskID, "executions");
+	}
+
+	private void resetAutomations() throws IOException, BWFLAException
+	{
+		automations = new ArrayList<>();
+
+		if (Files.notExists(automationBasePath)) {
+			Files.createDirectory(automationBasePath);
+			Files.createDirectory(automationBasePath.resolve("sikuli"));
+		}
+
+		else {
+			DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
+			pr.addArguments("rm", "-rf", "/tmp-storage/automation");
+			if (!pr.execute(true))
+				throw new BWFLAException("Could not delete automation dir contents!");
+			var p = new File("/tmp-storage/automation");
+
+			Files.createDirectory(p.toPath());
+			Files.createDirectory(automationBasePath.resolve("sikuli"));
+		}
+	}
 
 	private static String getLocationUrl(UriInfo uri, String subres, String id)
 	{

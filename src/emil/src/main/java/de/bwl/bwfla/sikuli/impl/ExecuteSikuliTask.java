@@ -3,9 +3,14 @@ package de.bwl.bwfla.sikuli.impl;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.emil.datatypes.rest.ComponentStateResponse;
+import de.bwl.bwfla.emucomp.api.ComponentState;
 import de.bwl.bwfla.sikuli.api.SikuliExecutionRequest;
 import org.apache.commons.io.IOUtils;
 
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.core.Response;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,7 +43,6 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 			x = 1280;
 			y = 1024;
 		}
-
 
 		log.info("Setting resolution to x: " + x + ", y: " + y);
 		DeprecatedProcessRunner resolutionXpraRunner = new DeprecatedProcessRunner("sudo");
@@ -79,26 +83,23 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 				"runc", "exec", "-e", "DISPLAY=:7000", "-e", "LD_PRELOAD=", request.getComponentId(),
 				"java", "-jar", "/sikulix.jar", "-c", "-r", scriptPathContainer.toString());
 
-		boolean DEBUG = true; //TODO request
+		boolean DEBUG = true; //TODO move to request eventually
 
 		if (DEBUG) {
 			sikuliRunner.addArguments("--", "DEBUG");
 
-			//TODO separate from DEBUG
+			//TODO separate from DEBUG eventually
 			if (request.getParameters() != null && !request.getParameters().isEmpty()) {
 				sikuliRunner.addArguments(request.getParameters());
 			}
 		}
 
-		//Optional<DeprecatedProcessRunner.Result> result = sikuliRunner.executeWithResult(true);
-
-		if (!sikuliRunner.start())
-			throw new BWFLAException("Starting untar failed!");
+		if (!sikuliRunner.start()) {
+			throw new BWFLAException("Starting sikuli subprocess failed!");
+		}
 		int success;
 
-		log.info("--------- Starting reader! -----------");
-
-
+		//TODO make configurable
 		Path logDir = Path.of("/tmp-storage/automation/sikuli/" + getTaskId());
 		if (!Files.exists(logDir)) {
 			Files.createDirectories(logDir);
@@ -114,17 +115,15 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 			}
 		}
 		catch (IOException error) {
-			throw new BWFLAException("Extracting tar archive failed!", error);
+			throw new BWFLAException("IO Error while writing to log file!", error);
 		}
 
 		success = sikuliRunner.waitUntilFinished();
+		log.info("Sikuli StdOut/StdErr");
+		sikuliRunner.printStdOut();
+		sikuliRunner.printStdErr();
 		sikuliRunner.cleanup();
 
-
-//		String output = result.get().stdout();
-//		boolean success = result.get().successful();
-//
-//
 		DeprecatedProcessRunner screenshotRunner = new DeprecatedProcessRunner("sudo");
 		screenshotRunner.addArgument("/libexec/findSikuliScreenshots.sh");
 		screenshotRunner.addArgument(info.getPid());
@@ -137,13 +136,14 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 			log.info("--------------- SUCCESSFULLY EXECUTED SIKULI SCRIPT! -----------------");
 
 			if (request.isHeadless()) {
-				//Thread.sleep(60000); //TODO properly check if component has shutdown correctly
+
 				stopComponentAfterExecution();
 			}
 
 			return "Successfully executed Sikuli Script at: " + scriptPathContainer;
 		}
 		else {
+			log.info("Sikuli returned Status code: " + success);
 			if (request.isHeadless()) {
 				stopComponentAfterExecution();
 			}
@@ -151,19 +151,32 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 		}
 	}
 
-	public int stopComponentAfterExecution()
+	public void stopComponentAfterExecution()
 	{
-		//TODO do this only if status is not stopped already!!!!
-		return 0;
-//		log.info("Stopping Component after Sikuli Execution");
-//		var target = ClientBuilder.newClient().target("http://eaas:8080/emil");
-//
-//		Invocation.Builder restRequest = target.path("/components/" + request.getComponentId() + "/stop").request();
-//
-//		Response response = restRequest.get();
-//		log.info("Stopping returned: " + response.getStatus());
-//
-//		return response.getStatus();
+		try {
+			log.info("Waiting 30 seconds to see if component has shutdown properly!");
+			Thread.sleep(30000);
 
+			log.info("Stopping Component after Sikuli Execution");
+			var target = ClientBuilder.newClient().target("http://eaas:8080/emil");
+
+			Invocation.Builder stateRequest = target.path("/components/" + request.getComponentId() + "/state").request();
+			Response stateResponse = stateRequest.get();
+			var resp = stateResponse.readEntity(ComponentStateResponse.class);
+			var state = resp.getState();
+			if (state.equals(ComponentState.STOPPED.toString()) || state.equals(ComponentState.FAILED.toString())) {
+				log.info("Component was properly stopped (or failed) after sikuli execution!");
+				return;
+			}
+
+			log.info("Component was not properly stopped after sikuli execution, shutting down now! If the machine runs Win95/98, this is a common occurrence.");
+			Invocation.Builder restRequest = target.path("/components/" + request.getComponentId() + "/stop").request();
+			Response response = restRequest.get();
+			response.getStatus();
+			log.info("Stopping returned: " + response.getStatus());
+		}
+		catch (Exception e) {
+			log.warning("Could not properly shutdown component (if necessary): " + e);
+		}
 	}
 }

@@ -39,6 +39,10 @@ public class ComponentResponse extends JaxbType {
         this.id = id;
     }
 
+    public ComponentResponse()
+    {
+    }
+
     public String getId() {
         return id;
     }
