@@ -32,8 +32,6 @@ public class SikuliUtils {
         if (tmpPathOpt.isEmpty()) {
             throw new BWFLAException("Could not find session for given ID: " + componentId);
         }
-
-        //logger.info("Returning: " + tmpPathOpt.get());
         return tmpPathOpt.get();
     }
 

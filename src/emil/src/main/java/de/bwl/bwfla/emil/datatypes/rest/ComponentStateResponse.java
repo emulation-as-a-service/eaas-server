@@ -33,6 +33,10 @@ public class ComponentStateResponse extends ComponentResponse {
         this.state = state;
     }
 
+    public ComponentStateResponse()
+    {
+    }
+
     public String getState() {
         return state;
     }
