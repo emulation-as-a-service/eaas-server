@@ -153,6 +153,8 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 
 	public void stopComponentAfterExecution()
 	{
+		return;
+		/*
 		try {
 			log.info("Waiting 30 seconds to see if component has shutdown properly!");
 			Thread.sleep(30000);
@@ -178,5 +180,7 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 		catch (Exception e) {
 			log.warning("Could not properly shutdown component (if necessary): " + e);
 		}
+		*/
+		
 	}
 }
