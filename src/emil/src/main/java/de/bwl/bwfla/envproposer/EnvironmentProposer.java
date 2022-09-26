@@ -29,7 +29,7 @@ import de.bwl.bwfla.emil.ObjectClassification;
 import de.bwl.bwfla.envproposer.api.ProposalRequest;
 import de.bwl.bwfla.envproposer.api.ProposalResponse;
 import de.bwl.bwfla.envproposer.impl.ProposalTask;
-import de.bwl.bwfla.envproposer.impl.UserData;
+import de.bwl.bwfla.common.datatypes.WaitQueueUserData;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -105,7 +105,7 @@ public class EnvironmentProposer
 			final String waitLocation = EnvironmentProposer.getLocationUrl(uri, "waitqueue", taskid);
 			final String resultLocation = EnvironmentProposer.getLocationUrl(uri, "proposals", taskid);
 			final TaskInfo<Object> info = taskmgr.lookup(taskid);
-			info.setUserData(new UserData(waitLocation, resultLocation));
+			info.setUserData(new WaitQueueUserData(waitLocation, resultLocation));
 
 			// Info message
 			final ProposalResponse response = new ProposalResponse()
@@ -149,7 +149,7 @@ public class EnvironmentProposer
 			Status status = null;
 			String location = null;
 
-			final UserData userdata = info.userdata(UserData.class);
+			final WaitQueueUserData userdata = info.userdata(WaitQueueUserData.class);
 			if (info.result().isDone()) {
 				// Result is available!
 				status = Status.SEE_OTHER;

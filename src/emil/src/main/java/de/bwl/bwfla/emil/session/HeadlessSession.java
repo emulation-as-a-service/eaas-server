@@ -7,7 +7,7 @@ import de.bwl.bwfla.emil.datatypes.ComputeRequest;
 import de.bwl.bwfla.emil.datatypes.ComputeResponse;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentResponse;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentStateResponse;
-import de.bwl.bwfla.emil.datatypes.rest.ProcessResultUrl;
+import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 import de.bwl.bwfla.emil.datatypes.rest.SnapshotResponse;
 import de.bwl.bwfla.emil.datatypes.snapshot.SaveNewEnvironmentRequest;
 import de.bwl.bwfla.emucomp.api.ComponentState;

@@ -19,8 +19,8 @@ import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.emil.datatypes.rest.ProcessResultUrl;
-import de.bwl.bwfla.envproposer.impl.UserData;
+import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
+import de.bwl.bwfla.common.datatypes.WaitQueueUserData;
 import de.bwl.bwfla.restutils.ResponseUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.tamaya.Configuration;
@@ -319,7 +319,7 @@ public class AutomationAPI
 			}
 
 			Response.Status status = Response.Status.OK;
-			final UserData userdata = info.userdata(UserData.class);
+			final WaitQueueUserData userdata = info.userdata(WaitQueueUserData.class);
 
 			WaitQueueResponse response = new WaitQueueResponse();
 			response.setId(id);
@@ -360,7 +360,7 @@ public class AutomationAPI
 		final String waitLocation = AutomationAPI.getLocationUrl(uri, "waitqueue", taskID);
 		final String resultLocation = AutomationAPI.getLocationUrl(uri, upload, taskID);
 		final TaskInfo<Object> swhInfo = taskmgr.lookup(taskID);
-		swhInfo.setUserData(new UserData(waitLocation, resultLocation));
+		swhInfo.setUserData(new WaitQueueUserData(waitLocation, resultLocation));
 
 		final WaitQueueCreatedResponse response = new WaitQueueCreatedResponse();
 		response.setTaskId(taskID);

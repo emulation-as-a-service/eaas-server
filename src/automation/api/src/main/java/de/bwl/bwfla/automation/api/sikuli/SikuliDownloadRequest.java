@@ -1,8 +1,8 @@
-package de.bwl.bwfla.sikuli.api;
+package de.bwl.bwfla.automation.api.sikuli;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SikuliDownloadRequest {
+public class SikuliDownloadRequest implements SikuliRequest{
     public SikuliDownloadRequest() {
     }
 

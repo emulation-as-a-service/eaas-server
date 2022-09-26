@@ -171,5 +171,16 @@
 			<artifactId>commons-net</artifactId>
 			<version>3.6</version>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>de.bwl.bwfla</groupId>
+            <artifactId>automation-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>automation-impl</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+    </dependencies>
 </project>
