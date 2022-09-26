@@ -1,4 +1,4 @@
-package de.bwl.bwfla.sikuli.api;
+package de.bwl.bwfla.automation.api.sikuli;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

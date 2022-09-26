@@ -348,5 +348,26 @@
 				</dependency>
 			</dependencies>
 		</profile>
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>automation</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>automation-api</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>automation-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>automation-impl</artifactId>
+				</dependency>
+			</dependencies>
+		</profile>
+
 	</profiles>
 </project>

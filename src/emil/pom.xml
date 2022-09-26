@@ -87,6 +87,10 @@
 			<artifactId>preservica-client</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>automation-client</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.webcohesion.enunciate</groupId>
 			<artifactId>enunciate-core-annotations</artifactId>
 		</dependency>

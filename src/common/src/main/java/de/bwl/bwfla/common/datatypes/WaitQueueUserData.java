@@ -17,16 +17,16 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.envproposer.impl;
+package de.bwl.bwfla.common.datatypes;
 
 
-public class UserData
+public class WaitQueueUserData
 {
 	private String waitLocation;
 	private String resultLocation;
 	
 	
-	public UserData(String waitloc, String resultloc)
+	public WaitQueueUserData(String waitloc, String resultloc)
 	{
 		this.waitLocation = waitloc;
 		this.resultLocation = resultloc;

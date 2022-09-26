@@ -1,4 +1,4 @@
-package de.bwl.bwfla.sikuli.api;
+package de.bwl.bwfla.automation.api.sikuli;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SikuliCreateScriptRequest {
+public class SikuliCreateScriptRequest implements SikuliRequest{
 
     @JsonProperty("componentId")
     private String componentId;

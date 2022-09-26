@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.datatypes.rest;
+package de.bwl.bwfla.common.datatypes;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
