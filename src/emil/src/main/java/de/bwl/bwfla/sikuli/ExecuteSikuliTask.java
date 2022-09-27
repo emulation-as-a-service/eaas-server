@@ -20,6 +20,7 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 	@Override
 	protected Object execute() throws Exception
 	{
+		request.setTaskId(getTaskId());
 		client.executeSikuliScript(request);
 		//TODO pass any result here?
 		return null;
