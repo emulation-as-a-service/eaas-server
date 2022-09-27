@@ -36,7 +36,7 @@ import java.util.logging.Logger;
 public class SikuliApi {
 
 
-	private static final Logger LOG = Logger.getLogger("SIKULI");
+	private static final Logger LOG = Logger.getLogger("SIKULI-GATEWAY-API");
 
 	@Inject
 	private Components components;
