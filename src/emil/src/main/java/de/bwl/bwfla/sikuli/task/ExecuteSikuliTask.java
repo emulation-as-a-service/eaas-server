@@ -28,6 +28,12 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 	protected Object execute() throws Exception
 	{
 		log.info("Starting Sikuli Execution Task");
+		Path taskPath = Path.of("/tmp-storage/automation/sikuli/").resolve(getTaskId());
+		Files.createDirectories(taskPath);
+		Path componentTxtPath = taskPath.resolve("component.txt");
+
+		Files.createFile(componentTxtPath);
+		Files.writeString(componentTxtPath, request.getComponentId());
 		var response = client.executeSikuliScript(request);
 
 		if (response.getStatus() == 200) {
@@ -35,9 +41,6 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 
 			log.info("Got response from emucomp backend, execution is done!");
 			var debugInfoBlobstoreUrl = result.getUrl();
-
-			Path taskPath = Path.of("/tmp-storage/automation/sikuli/").resolve(getTaskId());
-			Files.createDirectories(taskPath);
 
 			Path urlTxtPath = taskPath.resolve("url.txt");
 			Files.createFile(urlTxtPath);

@@ -27,7 +27,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -152,10 +155,10 @@ public class SikuliApi
 	@Path("/logs/tasks/{taskId}")
 	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
-	public SikuliLogResponse getLogsForTaskId(@PathParam("taskId") String taskId)
+	public SikuliLogResponse getLogsForTaskId(@PathParam("taskId") String taskId) throws Exception
 	{
 
-		return SikuliUtils.getLogsForTaskId(taskId);
+		return getSikuliLogsForTaskId(taskId);
 	}
 
 	@GET
@@ -320,6 +323,34 @@ public class SikuliApi
 		}
 
 	}
+
+	public SikuliLogResponse getSikuliLogsForTaskId(String taskId) throws Exception
+	{
+		var basePath = java.nio.file.Path.of("/tmp-storage/automation/sikuli").resolve(taskId);
+		if (Files.notExists(basePath)) {
+			throw new NotFoundException("Could not find directory for taskId " + taskId);
+		}
+		var response = new SikuliLogResponse();
+		if (Files.notExists(basePath.resolve("logs.txt"))) {
+			//task is created but still running, as logs.txt is only written upon task completion
+			//this means we need to grab the logs from the component directly
+
+			var componentId = Files.readString(basePath.resolve("component.txt"));
+			var client = getSikuliClient(componentId);
+			return client.getSikuliLogs();
+		}
+		else {
+			try {
+				response.setLines((ArrayList<String>) Files.readAllLines(basePath.resolve("logs.txt")));
+				return response;
+			}
+			catch (IOException e) {
+				throw new InternalServerErrorException("Could not read file, although log file is present");
+			}
+
+		}
+	}
+
 
 	private static String getLocationUrl(UriInfo uri, String subres, String id)
 	{
