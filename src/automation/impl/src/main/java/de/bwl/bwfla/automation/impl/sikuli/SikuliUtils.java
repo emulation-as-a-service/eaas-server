@@ -1,15 +1,11 @@
 package de.bwl.bwfla.automation.impl.sikuli;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 
@@ -33,9 +29,9 @@ public class SikuliUtils
 		return scriptPathOpt.get();
 	}
 
-	public static void extractTar(Path workDir, String blobStoreUrl) throws BWFLAException
+	//TODO a generalized version of this should probably be in commons
+	public static void extractTarToUploadDirectory(Path workDir, String blobStoreUrl) throws BWFLAException
 	{
-
 		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");
 		pr.addArguments("-L", "-o", workDir.toString() + "/out.tgz");
 		pr.addArgument(blobStoreUrl);
@@ -48,6 +44,8 @@ public class SikuliUtils
 		if (!pr.execute(true))
 			throw new BWFLAException("failed to extract tar");
 	}
+
+
 
 	public void stopComponentAfterExecution()
 	{

@@ -21,7 +21,6 @@ public class SikuliClient
 	public SikuliClient(URI sikuliConnectorAdress)
 	{
 		target = ClientBuilder.newClient().target(sikuliConnectorAdress);
-		System.out.println("GOT URI:" + sikuliConnectorAdress);
 	}
 
 	public Response executeSikuliScript(SikuliExecutionRequest request)
@@ -44,6 +43,14 @@ public class SikuliClient
 		LOG.info("Sending upload request to sikuli component backend on emucomp.");
 
 		return sikuliPostRequest(request, "/uploads");
+	}
+
+	public SikuliLogResponse getSikuliLogs()
+	{
+		LOG.info("Sending log request to sikuli component backend on emucomp.");
+		var targetRequest = target.path("/logs").request();
+		var response = targetRequest.get();
+		return response.readEntity(SikuliLogResponse.class);
 	}
 
 

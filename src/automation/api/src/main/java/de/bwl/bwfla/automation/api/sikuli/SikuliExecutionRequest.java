@@ -23,9 +23,6 @@ public class SikuliExecutionRequest implements SikuliRequest{
     @JsonProperty("parameters")
     private ArrayList<String> parameters;
 
-    @JsonProperty("taskId")
-    private String taskId;
-
     public String getComponentId() {
         return componentId;
     }
@@ -60,15 +57,6 @@ public class SikuliExecutionRequest implements SikuliRequest{
         this.parameters = parameters;
     }
 
-    public String getTaskId()
-    {
-        return taskId;
-    }
-
-    public void setTaskId(String taskId)
-    {
-        this.taskId = taskId;
-    }
 
     public class Resolution {
         @JsonProperty("x")

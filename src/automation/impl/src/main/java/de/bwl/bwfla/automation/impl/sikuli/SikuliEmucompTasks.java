@@ -3,6 +3,7 @@ package de.bwl.bwfla.automation.impl.sikuli;
 import com.openslx.eaas.common.util.RuncStateInformation;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.automation.api.sikuli.SikuliExecutionRequest;
+import de.bwl.bwfla.automation.api.sikuli.SikuliLogResponse;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -16,6 +17,7 @@ import org.apache.tamaya.ConfigurationProvider;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 
@@ -23,8 +25,10 @@ public class SikuliEmucompTasks
 {
 
 	private static final Logger LOG = Logger.getLogger("SIKULI-TASKS");
+	private static final Path sikuliBasePath = Path.of("/tmp-storage/emucomp-automation/sikuli"); //TODO config?
 
-	public static void executeSikuliScriptInEmulatorContainer(String componentId, SikuliExecutionRequest request, String taskId) throws Exception
+
+	public static void executeSikuliScriptInEmulatorContainer(String componentId, SikuliExecutionRequest request) throws Exception
 	{
 		LOG.info("Executing Sikuli Script...");
 
@@ -95,8 +99,8 @@ public class SikuliEmucompTasks
 		}
 		int success;
 
-		//TODO make configurable
-		Path logDir = Path.of("/tmp-storage/automation/sikuli/" + taskId);
+		//TODO make configurable ? (Configurationprovider, e.g. automation.logfile)
+		Path logDir = Path.of("/tmp-storage/emucomp-automation/sikuli/" + componentId);
 		if (!Files.exists(logDir)) {
 			Files.createDirectories(logDir);
 		}
@@ -115,7 +119,7 @@ public class SikuliEmucompTasks
 		}
 
 		success = sikuliRunner.waitUntilFinished();
-		LOG.info("Sikuli StdOut/StdErr");
+		LOG.info("Sikuli StdOut/StdErr:");
 		sikuliRunner.printStdOut();
 		sikuliRunner.printStdErr();
 		sikuliRunner.cleanup();
@@ -124,7 +128,7 @@ public class SikuliEmucompTasks
 		screenshotRunner.addArgument("/libexec/findSikuliScreenshots.sh");
 		screenshotRunner.addArgument(info.getPid());
 		screenshotRunner.addArgument(parentName.toString());
-		screenshotRunner.addArgument(taskId);
+		screenshotRunner.addArgument(componentId);
 		screenshotRunner.execute();
 
 
@@ -150,21 +154,9 @@ public class SikuliEmucompTasks
 	{
 
 		LOG.info("Starting Sikuli Upload Task...");
-
 		Path tmpPath = Path.of(RuncStateInformation.getRuncStateInformationForComponent(componentId).getBundle());
+		SikuliUtils.extractTarToUploadDirectory(tmpPath, blobstoreURL);
 
-		SikuliUtils.extractTar(tmpPath, blobstoreURL);
-
-		//TODO move everything below to gateway with new API (/reverse e.g.)
-//		Path scriptPath = SikuliUtils.getSikuliFilenameForDirectory(tmpPath.resolve("data/uploads"));
-//
-//		DeprecatedProcessRunner reverseScriptRunner = new DeprecatedProcessRunner("sudo");
-//		reverseScriptRunner.setWorkingDirectory(tmpPath);
-//		reverseScriptRunner.addArguments("python3", "/libexec/sikuli-script-creator/reverse.py", scriptPath.toString());
-//		reverseScriptRunner.execute(true);
-//
-//		ObjectMapper objectMapper = new ObjectMapper();
-//		return objectMapper.readValue(tmpPath.resolve("reverse_script.json").toFile(), SikuliUploadResponse.class);
 	}
 
 	public static ProcessResultUrl downloadCurrentSikuliScriptFromEmulatorContainer(String componentId) throws BWFLAException
@@ -196,6 +188,59 @@ public class SikuliEmucompTasks
 		returnResult.setUrl(handle.toRestUrl(blobStoreAddress));
 
 		LOG.info("Blob Store Address for Sikuli Script: " + handle.toRestUrl(blobStoreAddress));
+
+		return returnResult;
+	}
+
+	public static SikuliLogResponse getLogFiles(String componentId) throws IOException
+	{
+
+		var logFilePath = sikuliBasePath.resolve(componentId).resolve("logs.txt");
+
+		ArrayList<String> lines = null;
+
+		if (Files.exists(logFilePath)) {
+			lines = (ArrayList<String>) Files.readAllLines(logFilePath);
+		}
+
+		var resp = new SikuliLogResponse();
+		resp.setLines(lines);
+
+		return resp;
+
+	}
+
+	public static ProcessResultUrl getDebugFiles(String componentId) throws Exception
+	{
+		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
+		tarRunner.setWorkingDirectory(sikuliBasePath.resolve(componentId));
+		Path tgzPath = sikuliBasePath.resolve("sikuliDebug_" + componentId + ".tgz");
+		tarRunner.addArguments("-zcvf", tgzPath.toString(), ".");
+		tarRunner.execute(true);
+
+		final Configuration config = ConfigurationProvider.getConfiguration();
+		final BlobStore blobstore = BlobStoreClient.get()
+				.getBlobStorePort(config.get("ws.blobstore"));
+		final String blobStoreAddress = config.get("rest.blobstore");
+
+		final BlobDescription blob = new BlobDescription()
+				.setDescription("Sikuli Debug Screenshots and Logs")
+				.setNamespace("Sikuli")
+				.setDataFromFile(tgzPath)
+				.setType(".tgz")
+				.setName("sikuli_debug");
+
+		BlobHandle handle = blobstore.put(blob);
+
+		try {
+			Files.delete(tgzPath);
+		}
+		catch (IOException e) {
+			LOG.warning("Could not delete file!");
+		}
+
+		ProcessResultUrl returnResult = new ProcessResultUrl();
+		returnResult.setUrl(handle.toRestUrl(blobStoreAddress));
 
 		return returnResult;
 	}

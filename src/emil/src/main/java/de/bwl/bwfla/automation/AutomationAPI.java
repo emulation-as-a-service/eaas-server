@@ -219,46 +219,6 @@ public class AutomationAPI
 		return Response.ok(response).build();
 	}
 
-	@GET
-	@Path("/debug/{id}")
-	@Secured(roles = {Role.PUBLIC})
-	@Produces(MediaType.APPLICATION_JSON)
-	public ProcessResultUrl getSikuliDebugScreenshots(@PathParam("id") String id) throws BWFLAException
-	{
-		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
-		tarRunner.setWorkingDirectory(automationBasePath.resolve("sikuli"));
-		tarRunner.addArguments("-zcvf", "sikuliDebug" + id + ".tgz", id);
-		tarRunner.execute(true);
-
-		final Configuration config = ConfigurationProvider.getConfiguration();
-		final BlobStore blobstore = BlobStoreClient.get()
-				.getBlobStorePort(config.get("ws.blobstore"));
-		final String blobStoreAddress = config.get("rest.blobstore");
-
-		final BlobDescription blob = new BlobDescription()
-				.setDescription("SikuliX Debug Screenshots")
-				.setNamespace("SikuliX")
-				.setDataFromFile(automationBasePath.resolve("sikuli").resolve("sikuliDebug" + id + ".tgz"))
-				.setType(".tgz")
-				.setName("sikuliDebug" + id);
-
-		BlobHandle handle = blobstore.put(blob);
-
-		//TODO remove tar gz?
-		try {
-			Files.delete(automationBasePath.resolve("sikuli").resolve("sikuliDebug" + id + ".tgz"));
-		}
-		catch (IOException e) {
-			System.out.println("Could not delete file!");
-		}
-
-		ProcessResultUrl returnResult = new ProcessResultUrl();
-		returnResult.setUrl(handle.toRestUrl(blobStoreAddress));
-
-		System.out.println("Returning: " + returnResult.getUrl());
-
-		return returnResult;
-	}
 
 	@POST
 	@Path("/config")
@@ -291,19 +251,6 @@ public class AutomationAPI
 	{
 		return startAutomationTask(request, uri);
 	}
-
-
-	//TODO remove this, as it does the same as /execute?
-	@POST
-	@Path("/sikuli")
-	@Secured(roles = {Role.PUBLIC})
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response postExecuteInAlreadyRunningComponent(AutomationBaseRequest request, @Context UriInfo uri)
-	{
-		return startAutomationTask(request, uri);
-	}
-
 
 	@GET
 	@Path("/waitqueue/{id}")
