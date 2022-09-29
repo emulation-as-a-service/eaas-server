@@ -1,39 +1,29 @@
 package de.bwl.bwfla.sikuli;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
+import de.bwl.bwfla.automation.api.sikuli.SikuliLogResponse;
+import de.bwl.bwfla.automation.client.sikuli.SikuliClient;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
+import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.NotFoundException;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
 
 public class SikuliUtils
 {
-
-	private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile(".*/[\\w\\d-]+\\.sikuli/[\\w\\d-]+\\.py");
-
-	public static Path getSikuliFilenameForDirectory(Path directory) throws Exception
-	{
-
-
-		Optional<Path> scriptPathOpt = Files.find(directory,
-						Integer.MAX_VALUE,
-						(path, basicFileAttributes) -> SCRIPT_FILENAME_PATTERN.matcher(path.toString()).matches())
-				.findFirst();
-
-		if (scriptPathOpt.isEmpty()) {
-			throw new BWFLAException("Could not find Sikuli python Script for given directory: " + directory);
-		}
-		return scriptPathOpt.get();
-	}
 
 
 	public static String tarSikuliDirectoryAndUploadToBlobstore(Path sikuliDirectory) throws Exception
@@ -62,6 +52,7 @@ public class SikuliUtils
 		return handle.toRestUrl(blobStoreAddress);
 	}
 
+
 	public static void extractTarFromBlobstore(Path workDir, String blobStoreUrl) throws BWFLAException
 	{
 
@@ -78,4 +69,49 @@ public class SikuliUtils
 			throw new BWFLAException("failed to extract tar");
 	}
 
+	public static SikuliLogResponse getLogsForTaskId(String taskId)
+	{
+		var basePath = Path.of("/tmp-storage/automation/sikuli").resolve(taskId);
+		if (Files.notExists(basePath)) {
+			throw new NotFoundException("Could not find directory for taskId " + taskId);
+		}
+		var response = new SikuliLogResponse();
+		if (Files.notExists(basePath.resolve("logs.txt"))) {
+
+			return response;
+		}
+		else {
+			try {
+				response.setLines((ArrayList<String>) Files.readAllLines(basePath.resolve("logs.txt")));
+				return response;
+			}
+			catch (IOException e) {
+				throw new InternalServerErrorException("Could not read file, although log file is present");
+			}
+
+		}
+	}
+
+	public static ProcessResultUrl getDebugInfoForTaskId(String taskId)
+	{
+		var basePath = Path.of("/tmp-storage/automation/sikuli").resolve(taskId);
+		if (Files.notExists(basePath)) {
+			throw new NotFoundException("Could not find directory for taskId " + taskId);
+		}
+		var response = new ProcessResultUrl();
+		if (Files.notExists(basePath.resolve("logs.txt"))) {
+
+			return response;
+		}
+		else {
+			try {
+				response.setUrl(Files.readString(basePath.resolve("url.txt")));
+				return response;
+			}
+			catch (IOException e) {
+				throw new InternalServerErrorException("Could not read file, although log file is present");
+			}
+
+		}
+	}
 }

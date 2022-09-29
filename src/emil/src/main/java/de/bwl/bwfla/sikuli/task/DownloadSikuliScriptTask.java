@@ -1,4 +1,4 @@
-package de.bwl.bwfla.sikuli;
+package de.bwl.bwfla.sikuli.task;
 
 import de.bwl.bwfla.automation.api.sikuli.SikuliDownloadRequest;
 import de.bwl.bwfla.automation.client.sikuli.SikuliClient;
