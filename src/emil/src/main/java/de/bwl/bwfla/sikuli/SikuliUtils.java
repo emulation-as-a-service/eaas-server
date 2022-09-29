@@ -77,6 +77,8 @@ public class SikuliUtils
 		}
 		var response = new SikuliLogResponse();
 		if (Files.notExists(basePath.resolve("logs.txt"))) {
+			//task is created but still running, as logs.txt is only written upon task completion
+			//this means we need to grab the logs from the component directly
 
 			return response;
 		}
