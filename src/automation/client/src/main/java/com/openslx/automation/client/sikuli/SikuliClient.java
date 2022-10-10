@@ -1,6 +1,6 @@
-package de.bwl.bwfla.automation.client.sikuli;
+package com.openslx.automation.client.sikuli;
 
-import de.bwl.bwfla.automation.api.sikuli.*;
+import com.openslx.automation.api.sikuli.*;
 
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;

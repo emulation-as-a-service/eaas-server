@@ -1,9 +1,9 @@
-package de.bwl.bwfla.automation.impl.sikuli;
+package com.openslx.automation.impl.sikuli;
 
 import com.openslx.eaas.common.util.RuncStateInformation;
 import de.bwl.bwfla.api.blobstore.BlobStore;
-import de.bwl.bwfla.automation.api.sikuli.SikuliExecutionRequest;
-import de.bwl.bwfla.automation.api.sikuli.SikuliLogResponse;
+import com.openslx.automation.api.sikuli.SikuliExecutionRequest;
+import com.openslx.automation.api.sikuli.SikuliLogResponse;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -83,28 +83,29 @@ public class SikuliEmucompTasks
 				"runc", "exec", "-e", "DISPLAY=:7000", "-e", "LD_PRELOAD=", request.getComponentId(),
 				"java", "-jar", "/sikulix.jar", "-c", "-r", scriptPathContainer.toString());
 
-		boolean DEBUG = true; //TODO move to request eventually
+		//TODO change sikuli scripts to work without this
+		sikuliRunner.addArguments("--", "DEBUG");
 
-		if (DEBUG) {
-			sikuliRunner.addArguments("--", "DEBUG");
-
-			//TODO separate from DEBUG eventually
-			if (request.getParameters() != null && !request.getParameters().isEmpty()) {
-				sikuliRunner.addArguments(request.getParameters());
-			}
+		if (request.getParameters() != null && !request.getParameters().isEmpty()) {
+			sikuliRunner.addArguments(request.getParameters());
 		}
+
 
 		if (!sikuliRunner.start()) {
 			throw new BWFLAException("Starting sikuli subprocess failed!");
 		}
 		int success;
 
-		//TODO make configurable ? (Configurationprovider, e.g. automation.logfile)
 		Path logDir = Path.of("/tmp-storage/emucomp-automation/sikuli/" + componentId);
 		if (!Files.exists(logDir)) {
 			Files.createDirectories(logDir);
 		}
-		Path logPath = Files.createFile(logDir.resolve("logs.txt"));
+
+		Path logPath = logDir.resolve("logs.txt");
+		if (Files.notExists(logPath)) {
+			Files.createFile(logPath);
+		}
+
 		File sikuliLogFile = new File(logPath.toUri());
 
 		try (InputStreamReader reader = (InputStreamReader) sikuliRunner.getStdOutReader();

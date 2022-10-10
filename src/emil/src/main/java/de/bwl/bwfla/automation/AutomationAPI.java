@@ -199,16 +199,16 @@ public class AutomationAPI
 				}
 
 				//automation tasks contains a sikuli taks, so logs might be available
-//				if (null != pyResult.getSikuliTaskId()) {
-//					result.setSikuliTaskId(pyResult.getSikuliTaskId());
-//
+				if (null != pyResult.getSikuliTaskId()) {
+					result.setSikuliTaskId(pyResult.getSikuliTaskId());
+
 //					var logFilePath = java.nio.file.Path.of("/tmp-storage/automation/sikuli").resolve(pyResult.getSikuliTaskId()).resolve("logs.txt");
 //
 //					if (Files.exists(logFilePath)) {
 //						ArrayList<String> lines = (ArrayList<String>) Files.readAllLines(logFilePath);
 //						result.setLogs(lines);
 //					}
-//				}
+				}
 			}
 			resultList.add(result);
 		}

@@ -10,11 +10,14 @@ import java.util.List;
 public abstract class LogConnector implements IConnector {
 
     final protected List<Tail> logListener = new ArrayList<>();
-    private final Path logPath;
+    private Path logPath;
 
     protected LogConnector(Path logPath)
     {
         this.logPath = logPath;
+    }
+    public void setLogPath(Path newLogPath){
+        logPath = newLogPath;
     }
 
     public void cleanup()

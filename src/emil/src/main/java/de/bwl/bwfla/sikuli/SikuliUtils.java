@@ -1,8 +1,7 @@
 package de.bwl.bwfla.sikuli;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
-import de.bwl.bwfla.automation.api.sikuli.SikuliLogResponse;
-import de.bwl.bwfla.automation.client.sikuli.SikuliClient;
+import com.openslx.automation.api.sikuli.SikuliLogResponse;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -18,8 +17,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Optional;
-import java.util.regex.Pattern;
 
 
 public class SikuliUtils
@@ -63,7 +60,7 @@ public class SikuliUtils
 			throw new BWFLAException("failed to download " + blobStoreUrl);
 
 		pr = new DeprecatedProcessRunner("sudo");
-		pr.setWorkingDirectory(workDir.resolve("data/uploads"));
+		pr.setWorkingDirectory(workDir);
 		pr.addArguments("tar", "xvf", workDir.toString() + "/out.tgz");
 		if (!pr.execute(true))
 			throw new BWFLAException("failed to extract tar");

@@ -1,4 +1,4 @@
-package de.bwl.bwfla.automation.impl.sikuli;
+package com.openslx.automation.impl.sikuli;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
@@ -14,10 +14,9 @@ public class SikuliUtils
 
 	private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile(".*/[\\w\\d-]+\\.sikuli/[\\w\\d-]+\\.py");
 
+
 	public static Path getSikuliFilenameForDirectory(Path directory) throws Exception
 	{
-
-
 		Optional<Path> scriptPathOpt = Files.find(directory,
 						Integer.MAX_VALUE,
 						(path, basicFileAttributes) -> SCRIPT_FILENAME_PATTERN.matcher(path.toString()).matches())
@@ -74,7 +73,7 @@ public class SikuliUtils
 			log.info("Stopping returned: " + response.getStatus());
 		}
 		catch (Exception e) {
-			log.warning("Could not properly shutdown component (if necessary): " + e);
+			log.warning("Could not properly shut down component (if necessary): " + e);
 		}
 		*/
 
