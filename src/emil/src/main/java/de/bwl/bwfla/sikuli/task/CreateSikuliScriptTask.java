@@ -4,19 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.openslx.eaas.common.util.RuncStateInformation;
-import de.bwl.bwfla.api.blobstore.BlobStore;
-import de.bwl.bwfla.automation.api.sikuli.SikuliCreateScriptRequest;
-import de.bwl.bwfla.blobstore.api.BlobDescription;
-import de.bwl.bwfla.blobstore.api.BlobHandle;
-import de.bwl.bwfla.blobstore.client.BlobStoreClient;
+import com.openslx.automation.api.sikuli.SikuliCreateScriptRequest;
 import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.sikuli.SikuliUtils;
-import org.apache.tamaya.Configuration;
-import org.apache.tamaya.ConfigurationProvider;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +35,9 @@ public class CreateSikuliScriptTask extends BlockingTask<Object>
 		ObjectWriter objectWriter = new ObjectMapper().writer().with(SerializationFeature.INDENT_OUTPUT).withDefaultPrettyPrinter();
 		String json;
 		try {
+			log.info("Reading entries from request...");
 			json = objectWriter.writeValueAsString(request.getEntries());
+			log.info("Successfully read entries.");
 		}
 		catch (JsonProcessingException e) {
 			throw new BWFLAException("Could not unmarshall entries to JSON Object", e);
@@ -50,8 +45,16 @@ public class CreateSikuliScriptTask extends BlockingTask<Object>
 
 		Path workingDir = Files.createTempDirectory("sikuli");
 
+
 		try {
+			Files.createFile(workingDir.resolve("sikuli.json"));
 			Files.writeString(workingDir.resolve("sikuli.json"), json);
+			if(Files.exists(workingDir.resolve("sikuli.json"))){
+				log.info("Successfully wrote to " + workingDir.resolve("sikuli.json"));
+			}
+			else{
+				log.warning("File does not exist!");
+			}
 		}
 		catch (IOException e) {
 			throw new BWFLAException("Could not write sikuli entries to JSON file.", e);
@@ -59,14 +62,13 @@ public class CreateSikuliScriptTask extends BlockingTask<Object>
 
 		DeprecatedProcessRunner createScriptRunner = new DeprecatedProcessRunner("sudo");
 		createScriptRunner.setLogger(log);
-		createScriptRunner.setWorkingDirectory(workingDir);
 		createScriptRunner.addArgument("python3");
 		createScriptRunner.addArgument("/libexec/sikuli-script-creator/main.py");
 		createScriptRunner.addArgument(workingDir.resolve("sikuli.json").toString());
 		createScriptRunner.addArguments(workingDir.toString());
 		if (createScriptRunner.execute(true)) {
 
-			String blobstoreUrl = SikuliUtils.tarSikuliDirectoryAndUploadToBlobstore(workingDir);
+			String blobstoreUrl = SikuliUtils.tarSikuliDirectoryAndUploadToBlobstore(workingDir.resolve("output"));
 			ProcessResultUrl returnResult = new ProcessResultUrl();
 			returnResult.setUrl(blobstoreUrl);
 			return returnResult;

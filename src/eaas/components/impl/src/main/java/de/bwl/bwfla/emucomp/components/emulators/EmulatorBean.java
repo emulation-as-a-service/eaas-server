@@ -942,10 +942,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		this.addControlConnector(new StderrLogConnector(emuRunner.getStdOutPath()));
 
 		this.addControlConnector(new SikuliConnector());
+		this.addControlConnector(new SikuliLogConnector(Path.of("/placeholder")));
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
-
-
 
 	}
 
@@ -2713,6 +2712,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		LogConnector logCon = (LogConnector)getControlConnector(StderrLogConnector.PROTOCOL);
 		if(logCon == null)
 			return null;
+		return logCon.connect();
+	}
+
+	public Tail getSikuliLogs(String componentId)
+	{
+		LogConnector logCon = (LogConnector)getControlConnector(StderrLogConnector.PROTOCOL);
+		if(logCon == null)
+			return null;
+		logCon.setLogPath(Path.of("/tmp-storage/emucomp-automation/sikuli").resolve(componentId).resolve("logs.txt"));
 		return logCon.connect();
 	}
 }

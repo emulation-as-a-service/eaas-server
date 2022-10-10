@@ -1,9 +1,9 @@
 package de.bwl.bwfla.sikuli;
 
+import com.openslx.automation.api.sikuli.*;
 import de.bwl.bwfla.apiutils.WaitQueueResponse;
 
-import de.bwl.bwfla.automation.api.sikuli.*;
-import de.bwl.bwfla.automation.client.sikuli.SikuliClient;
+import com.openslx.automation.client.sikuli.SikuliClient;
 import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 import de.bwl.bwfla.common.datatypes.WaitQueueUserData;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -141,15 +141,6 @@ public class SikuliApi
 		return createWaitQueue(uri, taskID, "uploads");
 	}
 
-	@GET
-	@Path("/logs/components/{componentId}")
-	@Secured(roles = {Role.PUBLIC})
-	@Produces(MediaType.APPLICATION_JSON)
-	public SikuliLogResponse getLogsForComponentId(@PathParam("componentId") String componentId)
-	{
-
-		return getSikuliClient(componentId).getSikuliLogs();
-	}
 
 	@GET
 	@Path("/logs/tasks/{taskId}")
@@ -308,6 +299,7 @@ public class SikuliApi
 
 	private SikuliClient getSikuliClient(String componentId)
 	{
+		//TODO check if componentId is active
 		try {
 			var controlUrls = components.getControlUrls(componentId);
 			URI sikuliURI;
@@ -336,6 +328,7 @@ public class SikuliApi
 			//this means we need to grab the logs from the component directly
 
 			var componentId = Files.readString(basePath.resolve("component.txt"));
+			//TODO get componentStatus, if not running, return empty
 			var client = getSikuliClient(componentId);
 			return client.getSikuliLogs();
 		}

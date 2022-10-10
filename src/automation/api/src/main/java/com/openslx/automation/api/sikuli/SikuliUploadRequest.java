@@ -1,4 +1,4 @@
-package de.bwl.bwfla.automation.api.sikuli;
+package com.openslx.automation.api.sikuli;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

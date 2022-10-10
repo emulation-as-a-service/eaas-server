@@ -1,11 +1,10 @@
 package de.bwl.bwfla.sikuli.task;
 
-import de.bwl.bwfla.automation.api.sikuli.SikuliExecutionRequest;
-import de.bwl.bwfla.automation.client.sikuli.SikuliClient;
+import com.openslx.automation.api.sikuli.SikuliExecutionRequest;
+import com.openslx.automation.client.sikuli.SikuliClient;
 import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.sikuli.SikuliUtils;
 
 import javax.ws.rs.InternalServerErrorException;
 import java.nio.file.Files;
@@ -46,8 +45,9 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 			Files.createFile(urlTxtPath);
 			Files.writeString(urlTxtPath, debugInfoBlobstoreUrl);
 
+			//TODO only download logs once? Screenshots aren't needed on the gateway
 			log.info("Downloading Debug info from " + debugInfoBlobstoreUrl + " to: " + taskPath);
-			downloadAndExtractTar(taskPath, debugInfoBlobstoreUrl);
+			SikuliUtils.extractTarFromBlobstore(taskPath, debugInfoBlobstoreUrl);
 
 			return response;
 		}
@@ -57,26 +57,6 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 
 	}
 
-	//TODO a generalized version of this should probably be in commons
-	// see SikuliUtils in automation module
-	public static void downloadAndExtractTar(Path workDir, String blobStoreUrl) throws Exception
-	{
 
-		if (Files.notExists(workDir)) {
-			Files.createDirectories(workDir);
-		}
-
-		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");
-		pr.addArguments("-L", "-o", workDir.toString() + "/out.tgz");
-		pr.addArgument(blobStoreUrl);
-		if (!pr.execute(true))
-			throw new BWFLAException("failed to download " + blobStoreUrl);
-
-		pr = new DeprecatedProcessRunner("sudo");
-		pr.setWorkingDirectory(workDir);
-		pr.addArguments("tar", "xvf", workDir.toString() + "/out.tgz");
-		if (!pr.execute(true))
-			throw new BWFLAException("failed to extract tar");
-	}
 
 }

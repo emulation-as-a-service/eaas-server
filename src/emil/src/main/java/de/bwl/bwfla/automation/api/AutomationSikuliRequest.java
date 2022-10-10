@@ -15,7 +15,6 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 	@JsonProperty("sikuliUrl")
 	protected String sikuliUrl;
 
-	//sikuli only
 	@JsonProperty("customOutputs")
 	protected ArrayList<String> customOutputs;
 
@@ -27,6 +26,9 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 
 	@JsonProperty("resolutionY")
 	protected int resolutionY;
+
+	@JsonProperty(value = "shouldCompute", defaultValue = "true")
+	protected boolean shouldCompute;
 
 	public AutomationSikuliRequest()
 	{
@@ -80,5 +82,15 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 	public void setSikuliParams(ArrayList<String> sikuliParams)
 	{
 		this.sikuliParams = sikuliParams;
+	}
+
+	public boolean isShouldCompute()
+	{
+		return shouldCompute;
+	}
+
+	public void setShouldCompute(boolean shouldCompute)
+	{
+		this.shouldCompute = shouldCompute;
 	}
 }
