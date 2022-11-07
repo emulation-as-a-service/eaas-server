@@ -87,6 +87,7 @@ public class AutomationAPI
 		return Response.ok().build();
 	}
 
+	//TODO set done to true when error occurs
 	@GET
 	@Path("/automations")
 	@Secured(roles = {Role.PUBLIC})
@@ -141,7 +142,7 @@ public class AutomationAPI
 
 				result.setAutomationType(configData.getAutomationType());
 				result.setExecutable(configData.getExecutableLocation());
-				result.setOriginalEnvId(configData.getTargetId());
+				result.setOriginalEnvId(configData.getEnvironmentId());
 				result.setName(configData.getName());
 
 			}
@@ -153,7 +154,7 @@ public class AutomationAPI
 				try {
 					AutomationSikuliRequest configData2 = mapper.readValue(new File("/tmp-storage/automation/" + taskId + "/config.json"), AutomationSikuliRequest.class);
 					LOG.fine("Successfully read AutomationSikuliRequest for task " + taskId);
-					result.setOriginalEnvId(configData2.getTargetId());
+					result.setOriginalEnvId(configData2.getEnvironmentId()); //TODO when started as component this is written wrongfully
 					result.setName(configData2.getName());
 
 				}
@@ -199,15 +200,13 @@ public class AutomationAPI
 				}
 
 				//automation tasks contains a sikuli taks, so logs might be available
-				if (null != pyResult.getSikuliTaskId()) {
-					result.setSikuliTaskId(pyResult.getSikuliTaskId());
-
-//					var logFilePath = java.nio.file.Path.of("/tmp-storage/automation/sikuli").resolve(pyResult.getSikuliTaskId()).resolve("logs.txt");
-//
-//					if (Files.exists(logFilePath)) {
-//						ArrayList<String> lines = (ArrayList<String>) Files.readAllLines(logFilePath);
-//						result.setLogs(lines);
-//					}
+				String sikuliTaskId;
+				String componentId;
+				if (null != (sikuliTaskId = pyResult.getSikuliTaskId())) {
+					result.setSikuliTaskId(sikuliTaskId);
+				}
+				if (null != (componentId = pyResult.getComponentId())) {
+					result.setComponentId(componentId);
 				}
 			}
 			resultList.add(result);
@@ -275,6 +274,7 @@ public class AutomationAPI
 			if (info.result().isCompletedExceptionally()) {
 				response.setHasError(true);
 				response.setStatus("Error");
+				response.setDone(true);
 			}
 			else if (info.result().isDone()) {
 				// Result is available!

@@ -12,6 +12,8 @@ import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.apiutils.WaitQueueCreatedResponse;
 import de.bwl.bwfla.emil.Components;
+import de.bwl.bwfla.emil.datatypes.rest.ComponentStateResponse;
+import de.bwl.bwfla.emucomp.api.ComponentState;
 import de.bwl.bwfla.restutils.ResponseUtils;
 import de.bwl.bwfla.sikuli.task.CreateSikuliScriptTask;
 import de.bwl.bwfla.sikuli.task.DownloadSikuliScriptTask;
@@ -37,11 +39,9 @@ import java.util.logging.Logger;
 
 
 @ApplicationScoped
-@Path("/sikuli/api/v1")
+@Path("/sikuli/api/v1") //FIXME directory needs to be cleaned upon startup, on emucomp as well!!!
 public class SikuliApi
 {
-
-
 	private static final Logger LOG = Logger.getLogger("SIKULI-GATEWAY-API");
 
 	@Inject
@@ -145,8 +145,8 @@ public class SikuliApi
 	@GET
 	@Path("/logs/tasks/{taskId}")
 	@Secured(roles = {Role.PUBLIC})
-	@Produces(MediaType.APPLICATION_JSON)
-	public SikuliLogResponse getLogsForTaskId(@PathParam("taskId") String taskId) throws Exception
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response getLogsForTaskId(@PathParam("taskId") String taskId) throws Exception
 	{
 
 		return getSikuliLogsForTaskId(taskId);
@@ -316,26 +316,37 @@ public class SikuliApi
 
 	}
 
-	public SikuliLogResponse getSikuliLogsForTaskId(String taskId) throws Exception
+	public Response getSikuliLogsForTaskId(String taskId) throws Exception
 	{
 		var basePath = java.nio.file.Path.of("/tmp-storage/automation/sikuli").resolve(taskId);
 		if (Files.notExists(basePath)) {
 			throw new NotFoundException("Could not find directory for taskId " + taskId);
 		}
-		var response = new SikuliLogResponse();
 		if (Files.notExists(basePath.resolve("logs.txt"))) {
+			LOG.info("Log path does not exist, trying to redirect to component stream log!");
 			//task is created but still running, as logs.txt is only written upon task completion
 			//this means we need to grab the logs from the component directly
 
+			if (Files.notExists(basePath.resolve("component.txt"))) {
+				throw new NotFoundException("No component was found for sikuli task with id " + taskId);
+			}
 			var componentId = Files.readString(basePath.resolve("component.txt"));
-			//TODO get componentStatus, if not running, return empty
-			var client = getSikuliClient(componentId);
-			return client.getSikuliLogs();
+
+			String componentState = ((ComponentStateResponse) components.getState(componentId)).getState();
+
+			if (!componentState.equals(ComponentState.RUNNING.name())) {
+				throw new NotFoundException("Component is not running, can't access real time logs for task with id " + taskId);
+			}
+
+			var urls = components.getControlUrls(componentId);
+			var logurl = urls.get("sikulilog");
+			return Response.temporaryRedirect(logurl).build();
 		}
 		else {
+			LOG.info("Log path does exist, returning contents");
 			try {
-				response.setLines((ArrayList<String>) Files.readAllLines(basePath.resolve("logs.txt")));
-				return response;
+				String logText = Files.readString(basePath.resolve("logs.txt"));
+				return Response.ok(logText).build();
 			}
 			catch (IOException e) {
 				throw new InternalServerErrorException("Could not read file, although log file is present");

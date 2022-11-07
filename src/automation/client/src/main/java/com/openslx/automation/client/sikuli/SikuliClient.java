@@ -1,6 +1,7 @@
 package com.openslx.automation.client.sikuli;
 
 import com.openslx.automation.api.sikuli.*;
+import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -53,6 +54,13 @@ public class SikuliClient
 		return response.readEntity(SikuliLogResponse.class);
 	}
 
+	public ProcessResultUrl getDebugURL()
+	{
+		LOG.info("Sending debug request to sikuli component backend on emucomp.");
+		var targetRequest = target.path("/debug").request();
+		var response = targetRequest.get();
+		return response.readEntity(ProcessResultUrl.class);
+	}
 
 	private Response sikuliPostRequest(SikuliRequest request, String urlPath)
 	{

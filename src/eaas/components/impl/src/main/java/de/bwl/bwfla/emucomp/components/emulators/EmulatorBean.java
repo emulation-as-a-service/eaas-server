@@ -40,11 +40,7 @@ import de.bwl.bwfla.common.services.guacplay.net.GuacTunnel;
 import de.bwl.bwfla.common.services.guacplay.net.TunnelConfig;
 import de.bwl.bwfla.common.services.guacplay.protocol.InstructionBuilder;
 import de.bwl.bwfla.common.services.guacplay.record.SessionRecorder;
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.DiskDescription;
-import de.bwl.bwfla.common.utils.ImageInformation;
-import de.bwl.bwfla.common.utils.ProcessMonitor;
-import de.bwl.bwfla.common.utils.Zip32Utils;
+import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils.XmountOutputFormat;
@@ -94,15 +90,15 @@ import java.util.stream.Stream;
  */
 public abstract class EmulatorBean extends EaasComponentBean implements EmulatorComponent
 {
-    private EmulatorBeanMode emuBeanMode;
+	private EmulatorBeanMode emuBeanMode;
 
-    @Inject
-    @Config("emucomp.inactivitytimeout")
-    public int inactivityTimeout;
+	@Inject
+	@Config("emucomp.inactivitytimeout")
+	public int inactivityTimeout;
 
-    @Inject
-    @Config("emucomp.alsa_card")
-    public String alsa_card;
+	@Inject
+	@Config("emucomp.alsa_card")
+	public String alsa_card;
 
 	@Inject
 	@Config("emucomp.libfaketime")
@@ -123,8 +119,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Config("emucomp.blobstore_soap")
 	private String blobStoreAddressSoap = null;
 
-    @Resource(lookup = "java:jboss/ee/concurrency/executor/io")
-    protected ExecutorService ioTaskExecutor;
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	protected ExecutorService ioTaskExecutor;
 
 	@Resource(lookup = "java:jboss/ee/concurrency/factory/default")
 	protected ManagedThreadFactory workerThreadFactory;
@@ -136,7 +132,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private final String containerOutput = "container-output";
 
 	private static final String emulatorDataBase = "/home/bwfla/server-data/emulator-data/";
-    
+
 	protected final TunnelConfig tunnelConfig = new TunnelConfig();
 
 	protected final EmulatorBeanState emuBeanState = new EmulatorBeanState(EmuCompState.EMULATOR_UNDEFINED, LOG);
@@ -172,7 +168,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	/** Tool for capturing of screenshots. */
 	private ScreenShooter scrshooter = null;
-	
+
 	final boolean isScreenshotEnabled = ConfigurationProvider.getConfiguration().get("emucomp.enable_screenshooter", Boolean.class);
 
 	protected PostScriptPrinter printer = null;
@@ -187,11 +183,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private static final String TRACE_FILE = "session" + GuacDefs.TRACE_FILE_EXT;
 
 	/* Supported protocol names */
-	private static final String PROTOCOL_SDLONP  = "sdlonp";
-	private static final String PROTOCOL_Y11     = "y11";
+	private static final String PROTOCOL_SDLONP = "sdlonp";
+	private static final String PROTOCOL_Y11 = "y11";
 
 	/* Supported audio driver names */
-	private static final String AUDIODRIVER_PULSE  = "pulse";
+	private static final String AUDIODRIVER_PULSE = "pulse";
 
 	/** Data directory inside of the emulator-containers */
 	private static final String EMUCON_DATA_DIR = "/emucon/data";
@@ -226,7 +222,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	{
 		String targetBean = env.getEmulator().getBean() + "Bean";
 		Class<?> beanClass = Class.forName(EmulatorBean.class.getPackage().getName() + "." + targetBean);
-		return (EmulatorBean)CDI.current().select(beanClass).get();
+		return (EmulatorBean) CDI.current().select(beanClass).get();
 	}
 
 	public boolean isClientAttached()
@@ -254,7 +250,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return (emuBeanMode == EmulatorBeanMode.Y11);
 	}
 
-	public boolean isHeadlessModeEnabled() { return (emuBeanMode == EmulatorBeanMode.HEADLESS); }
+	public boolean isHeadlessModeEnabled()
+	{
+		return (emuBeanMode == EmulatorBeanMode.HEADLESS);
+	}
 
 	public boolean isContainerModeEnabled()
 	{
@@ -277,9 +276,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return "machine";
 	}
 
-	boolean isHeadlessSupported() { return false; }
+	boolean isHeadlessSupported()
+	{
+		return false;
+	}
 
-	boolean isBeanReady() {
+	boolean isBeanReady()
+	{
 		return true; // this is the default, if the bean has no internal state
 	}
 
@@ -410,9 +413,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		throw new UnsupportedOperationException(message);
 	}
 
-	private String getEmulatorArchive() {
+	private String getEmulatorArchive()
+	{
 		String archive = ConfigurationProvider.getConfiguration().get("emucomp.emulator_archive");
-		if(archive == null || archive.isEmpty())
+		if (archive == null || archive.isEmpty())
 			return EMULATOR_DEFAULT_ARCHIVE;
 		return archive;
 	}
@@ -461,8 +465,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		emuConfig.setHardTermination(false);
 
-		try
-		{
+		try {
 			if (this.isContainerModeEnabled()) {
 				// Check, that rootfs-image is specified!
 				final boolean isRootFsFound = env.getAbstractDataResource().stream()
@@ -493,8 +496,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	synchronized public void destroy()
 	{
-		synchronized (emuBeanState)
-		{
+		synchronized (emuBeanState) {
 			final EmuCompState curstate = emuBeanState.get();
 			if (curstate == EmuCompState.EMULATOR_UNDEFINED)
 				return;
@@ -509,15 +511,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		this.stopInternal();
 
 		// free container IDs and remove corresp. files
-		for(File container: containers.values())
+		for (File container : containers.values())
 			container.delete();
 
 		containers.clear();
 
 		// kill vde networking threads
-		for(DeprecatedProcessRunner subprocess : this.vdeProcesses)
-		{
-			if(subprocess.isProcessRunning())
+		for (DeprecatedProcessRunner subprocess : this.vdeProcesses) {
+			if (subprocess.isProcessRunning())
 				subprocess.stop();
 
 			subprocess.cleanup();
@@ -530,8 +531,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			scrshooter.finish();
 
 		// Stop and finalize session-recording
-		if (recorder != null && !recorder.isFinished())
-		{
+		if (recorder != null && !recorder.isFinished()) {
 			try {
 				recorder.finish();
 			}
@@ -588,7 +588,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 						.setId(this.getComponentId());
 			}
 		}
-		catch(Throwable error) {
+		catch (Throwable error) {
 			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
 			String message = "Starting emulator failed!";
 			LOG.log(Level.SEVERE, message, error);
@@ -605,7 +605,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (this.isLocalModeEnabled())
 			LOG.info("Local-mode enabled. Emulator will be started locally!");
 
-		if(isSnapshotEnabled && !disableFakeClock) {
+		if (isSnapshotEnabled && !disableFakeClock) {
 			LOG.info("initializing fake clock");
 			emuRunner.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_clock_gettime.so");
 		}
@@ -656,17 +656,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				// Mount emulator's data dir entries
 				try (Stream<Path> entries = Files.list(this.getDataDir())) {
 					entries.forEach((entry) -> {
-								final String path = entry.toString();
-								cgen.addArgument("--mount");
-								cgen.addArgument(path, ":", hostPathReplacer.apply(path), ":bind:rw");
+						final String path = entry.toString();
+						cgen.addArgument("--mount");
+						cgen.addArgument(path, ":", hostPathReplacer.apply(path), ":bind:rw");
 
-								if(path.contains("printer")) // compatibility for old snapshots
-								{
-									String target = hostPathReplacer.apply(path).replace("printer", "print");
-									cgen.addArgument("--mount");
-									cgen.addArgument(path, ":", target, ":bind:rw");
-								}
-							});
+						if (path.contains("printer")) // compatibility for old snapshots
+						{
+							String target = hostPathReplacer.apply(path).replace("printer", "print");
+							cgen.addArgument("--mount");
+							cgen.addArgument(path, ":", target, ":bind:rw");
+						}
+					});
 				}
 				catch (Exception error) {
 					LOG.log(Level.WARNING, "Listing '" + hostDataDir + "' failed!\n", error);
@@ -808,30 +808,30 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		if (this.isSdlBackendEnabled()) {
 			final Thread ctlSockObserver = workerThreadFactory.newThread(() -> {
-					while (emuBeanState.fetch() != EmuCompState.EMULATOR_UNDEFINED) {
-						try {
-							// Try to receive new message
-							if (!ctlMsgReader.read(5000))
-								continue;
+						while (emuBeanState.fetch() != EmuCompState.EMULATOR_UNDEFINED) {
+							try {
+								// Try to receive new message
+								if (!ctlMsgReader.read(5000))
+									continue;
 
-							// Message could be read, queue it for further processing
-							if (ctlMsgReader.isNotification())
-								ctlEvents.add(ctlMsgReader.getEventID());
-							else {
-								final byte msgtype = ctlMsgReader.getMessageType();
-								final byte[] msgdata = ctlMsgReader.getMessageData();
-								ctlMsgQueue.put(msgtype, msgdata);
+								// Message could be read, queue it for further processing
+								if (ctlMsgReader.isNotification())
+									ctlEvents.add(ctlMsgReader.getEventID());
+								else {
+									final byte msgtype = ctlMsgReader.getMessageType();
+									final byte[] msgdata = ctlMsgReader.getMessageData();
+									ctlMsgQueue.put(msgtype, msgdata);
+								}
+							}
+							catch (Exception exception) {
+								if (emuBeanState.fetch() == EmuCompState.EMULATOR_UNDEFINED)
+									break;  // Ignore problems when destroying session!
+
+								LOG.warning("An error occured while reading from control-socket!");
+								LOG.log(Level.SEVERE, exception.getMessage(), exception);
 							}
 						}
-						catch (Exception exception) {
-							if (emuBeanState.fetch() == EmuCompState.EMULATOR_UNDEFINED)
-								break;  // Ignore problems when destroying session!
-
-							LOG.warning("An error occured while reading from control-socket!");
-							LOG.log(Level.SEVERE, exception.getMessage(), exception);
-						}
 					}
-				}
 			);
 
 			ctlSockObserver.start();
@@ -839,39 +839,40 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		final Thread emuObserver = workerThreadFactory.newThread(() -> {
 
-				emuRunner.waitUntilFinished();
+			emuRunner.waitUntilFinished();
 
-				// upload emulator's output
-				if (this.isOutputAvailable()) {
-					LOG.info("Output is available!");
-					try {
-						this.processEmulatorOutput();
-					}
-					catch (BWFLAException error) {
-						LOG.log(Level.WARNING, "Processing emulator's output failed!", error);
-					}
+			// upload emulator's output
+			if (this.isOutputAvailable()) {
+				LOG.info("Output is available!");
+				try {
+					this.processEmulatorOutput();
 				}
-				else{
-					LOG.info("No emulator output available!");
+				catch (BWFLAException error) {
+					LOG.log(Level.WARNING, "Processing emulator's output failed!", error);
 				}
+			}
+			else {
+				LOG.info("No emulator output available!");
+			}
 
-				// cleanup will be performed later by EmulatorBean.destroy()
+			// cleanup will be performed later by EmulatorBean.destroy()
 
-				synchronized (emuBeanState) {
-					if (EmulatorBean.this.isLocalModeEnabled()) {
-						// In local-mode emulator will be terminated by the user,
-						// without using our API. Set the correct state here!
+			synchronized (emuBeanState) {
+				if (EmulatorBean.this.isLocalModeEnabled()) {
+					// In local-mode emulator will be terminated by the user,
+					// without using our API. Set the correct state here!
+					emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
+				}
+				else {
+					final EmuCompState curstate = emuBeanState.get();
+					if (curstate == EmuCompState.EMULATOR_RUNNING) {
+						LOG.warning("Emulator stopped unexpectedly!");
+						// FIXME: setting here also to STOPPED, since there is currently no reliable way
+						// to determine (un-)successful termination depending on application exit code
 						emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
-					} else {
-						final EmuCompState curstate = emuBeanState.get();
-						if (curstate == EmuCompState.EMULATOR_RUNNING) {
-							LOG.warning("Emulator stopped unexpectedly!");
-							// FIXME: setting here also to STOPPED, since there is currently no reliable way
-							// to determine (un-)successful termination depending on application exit code
-							emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
-						}
 					}
 				}
+			}
 		});
 
 		emuObserver.start();
@@ -951,8 +952,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Override
 	synchronized public String stop() throws BWFLAException
 	{
-		synchronized (emuBeanState)
-		{
+		synchronized (emuBeanState) {
 			final EmuCompState curstate = emuBeanState.get();
 			if (curstate != EmuCompState.EMULATOR_RUNNING) {
 				LOG.warning("Cannot stop emulator! Wrong state detected: " + curstate.value());
@@ -975,62 +975,63 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	}
 
 	//TODO when should this be used, when getChanged files?
-	private Path getAllFiles(BlobStoreBinding binding, Path cow, FileSystemType fsType) throws BWFLAException {
+	private Path getAllFiles(BlobStoreBinding binding, Path cow, FileSystemType fsType) throws BWFLAException
+	{
 		try (final ImageMounter mounter = new ImageMounter(LOG)) {
 			Path output;
-			if( binding.getResourceType() != Binding.ResourceType.ISO) {
+			if (binding.getResourceType() != Binding.ResourceType.ISO) {
 
-                final Path workdir = this.getWorkingDir().resolve("output");
-                try {
-                    Files.createDirectories(workdir);
-                }
-                catch (IOException e)
-                {
-                    throw new BWFLAException("failed creating workdir").setId(this.getComponentId());
-                }
+				final Path workdir = this.getWorkingDir().resolve("output");
+				try {
+					Files.createDirectories(workdir);
+				}
+				catch (IOException e) {
+					throw new BWFLAException("failed creating workdir").setId(this.getComponentId());
+				}
 
-                output = workdir.resolve("output.zip");
+				output = workdir.resolve("output.zip");
 
-                // Mount partition's filesystem
-                final ImageMounter.Mount rawmnt = mounter.mount(cow,
-                        workdir.resolve(cow.getFileName() + ".dd"), binding.getPartitionOffset());
-                final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
+				// Mount partition's filesystem
+				final ImageMounter.Mount rawmnt = mounter.mount(cow,
+						workdir.resolve(cow.getFileName() + ".dd"), binding.getPartitionOffset());
+				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
 
-                final Path srcdir = fsmnt.getMountPoint();
-                if (emuEnvironment.isLinuxRuntime())
-                    Zip32Utils.zip(output.toFile(), srcdir.resolve(containerOutput).toFile());
-                else {
-                    Set<String> exclude = new HashSet<>();
-                    exclude.add("uvi.bat");
-                    exclude.add("autorun.inf");
+				final Path srcdir = fsmnt.getMountPoint();
+				if (emuEnvironment.isLinuxRuntime())
+					Zip32Utils.zip(output.toFile(), srcdir.resolve(containerOutput).toFile());
+				else {
+					Set<String> exclude = new HashSet<>();
+					exclude.add("uvi.bat");
+					exclude.add("autorun.inf");
 
-                    Zip32Utils.zip(output.toFile(), srcdir.toFile(), exclude);
-                }
-                return output;
-            }
+					Zip32Utils.zip(output.toFile(), srcdir.toFile(), exclude);
+				}
+				return output;
+			}
 			else {
 				throw new BWFLAException("Unsupported binding type").setId(this.getComponentId());
 			}
 		}
 	}
 
-	private Path getChangedFiles(Path cowImage) throws BWFLAException {
-	    List<Path> partitionFiles = new ArrayList<>();
+	private Path getChangedFiles(Path cowImage) throws BWFLAException
+	{
+		List<Path> partitionFiles = new ArrayList<>();
 		QcowOptions qcowOptions = new QcowOptions();
 		try (final ImageMounter mounter = new ImageMounter(LOG)) {
-		    ImageInformation imageInformation = new ImageInformation(cowImage.toString(), LOG);
-            String backingFileId = imageInformation.getBackingFile();
+			ImageInformation imageInformation = new ImageInformation(cowImage.toString(), LOG);
+			String backingFileId = imageInformation.getBackingFile();
 
-            qcowOptions.setBackingFile(backingFileId);
+			qcowOptions.setBackingFile(backingFileId);
 
-            final Path workdir = this.getWorkingDir().resolve("output-all");
-            Files.createDirectories(workdir);
+			final Path workdir = this.getWorkingDir().resolve("output-all");
+			Files.createDirectories(workdir);
 
-            Path lowerImgPath = workdir.resolve("lowerImageLayer.cow");
-            EmulatorUtils.createCowFile(lowerImgPath, qcowOptions);
+			Path lowerImgPath = workdir.resolve("lowerImageLayer.cow");
+			EmulatorUtils.createCowFile(lowerImgPath, qcowOptions);
 
-            ImageMounter.Mount rawmnt = mounter.mount(lowerImgPath, workdir.resolve("lowerImageLayer.dd"));
-            ImageMounter.Mount rawmnt2 = mounter.mount(cowImage, workdir.resolve("upperDir.dd"));
+			ImageMounter.Mount rawmnt = mounter.mount(lowerImgPath, workdir.resolve("lowerImageLayer.dd"));
+			ImageMounter.Mount rawmnt2 = mounter.mount(cowImage, workdir.resolve("upperDir.dd"));
 
 			// load partition table
 			final DiskDescription disk = DiskDescription.read(Path.of(rawmnt.getTargetImage()), LOG);
@@ -1042,9 +1043,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				//FIXME this works for my win 7 example, but
 				//FIXME the proper solution is to fix the mounting and iterate
-				if (disk.getPartitions().size() > 1){
+				if (disk.getPartitions().size() > 1) {
 					LOG.info("Found multiple partitions!");
-					if (partition.getFlags() != null && partition.getFlags().contains("boot")){
+					if (partition.getFlags() != null && partition.getFlags().contains("boot")) {
 						LOG.info("Skipping boot Partition!");
 						continue;
 					}
@@ -1061,8 +1062,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				try {
 					fsType = FileSystemType.fromString(partition.getFileSystemType());
 				}
-				catch (IllegalArgumentException e)
-				{
+				catch (IllegalArgumentException e) {
 					LOG.warning("filesystem " + partition.getFileSystemType() + " not yet support. please report.");
 					continue;
 				}
@@ -1114,17 +1114,16 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			return outputTar;
 		}
-		catch (BWFLAException  cause) {
+		catch (BWFLAException cause) {
 			cause.printStackTrace();
 			throw cause;
 		}
-		catch (IOException ioException)
-        {
-            ioException.printStackTrace();
-            final String message = "IO Exception in getChangedFiles";
+		catch (IOException ioException) {
+			ioException.printStackTrace();
+			final String message = "IO Exception in getChangedFiles";
 			throw new BWFLAException(message, ioException)
 					.setId(this.getComponentId());
-        }
+		}
 	}
 
 
@@ -1136,7 +1135,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		Path outputTar = null;
 
 		Binding b = bindings.get(bindingId);
-		if(b == null) {
+		if (b == null) {
 			final String message = "Unknown output bindingId " + bindingId;
 			final BWFLAException error = new BWFLAException(message)
 					.setId(this.getComponentId());
@@ -1146,12 +1145,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		try {
 
-			if(emuEnvironment.isLinuxRuntime()){
+			if (emuEnvironment.isLinuxRuntime()) {
 
-				for (AbstractDataResource r : emuEnvironment.getAbstractDataResource())
-				{
-					if(r.getId() != null && r.getId().equals("rootfs"))
-					{
+				for (AbstractDataResource r : emuEnvironment.getAbstractDataResource()) {
+					if (r.getId() != null && r.getId().equals("rootfs")) {
 						LOG.info("Linux runtime recognized, processing with rootfs...");
 						final String cowImage = bindings.lookup(BindingsManager.toBindingId("rootfs", BindingsManager.EntryType.IMAGE));
 						this.unmountBindings();
@@ -1168,20 +1165,20 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			final BlobDescription blob = new BlobDescription()
-				.setDescription("Output for session " + this.getComponentId())
-				.setNamespace("emulator-outputs")
-				.setName("output");
+					.setDescription("Output for session " + this.getComponentId())
+					.setNamespace("emulator-outputs")
+					.setName("output");
 
 			blob.setDataFromFile(outputTar);
 			blob.setType(".tgz");
 
 			// Upload archive to the BlobStore
 			BlobHandle handle = BlobStoreClient.get()
-                    .getBlobStorePort(blobStoreAddressSoap)
-                    .put(blob);
+					.getBlobStorePort(blobStoreAddressSoap)
+					.put(blob);
 
-            if (handle == null) {
-                throw new BWFLAException("Output result is null").setId(this.getComponentId());
+			if (handle == null) {
+				throw new BWFLAException("Output result is null").setId(this.getComponentId());
 			}
 			this.result.complete(handle);
 		}
@@ -1229,11 +1226,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			printer.stop();
 
 		final var stdoutCon = (LogConnector) this.getControlConnector(StdoutLogConnector.PROTOCOL);
-		if(stdoutCon != null)
+		if (stdoutCon != null)
 			stdoutCon.cleanup();
 
 		final var stderrCon = (LogConnector) this.getControlConnector(StderrLogConnector.PROTOCOL);
-		if(stderrCon != null)
+		if (stderrCon != null)
 			stderrCon.cleanup();
 
 	}
@@ -1328,10 +1325,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	}
 
 	@Override
-	public String  getRuntimeConfiguration() throws BWFLAException
+	public String getRuntimeConfiguration() throws BWFLAException
 	{
-		synchronized (emuBeanState)
-		{
+		synchronized (emuBeanState) {
 			if (emuBeanState.get() == EmuCompState.EMULATOR_UNDEFINED) {
 				String message = "Runtime configuration is not available in this state!";
 				throw new IllegalEmulatorStateException(message, EmuCompState.EMULATOR_UNDEFINED)
@@ -1340,12 +1336,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 		try {
 			return this.emuEnvironment.value();
-		} catch (JAXBException e) {
+		}
+		catch (JAXBException e) {
 			throw new BWFLAException("Serializing environment description failed!", e)
 					.setId(this.getComponentId());
 		}
 	}
-	
+
 	@Override
 	public Set<String> getColdplugableDrives()
 	{
@@ -1391,9 +1388,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				continue;
 
 			final Binding binding = (Binding) resource;
-			if(((Binding) resource).getAccess() == Binding.AccessType.COPY)
+			if (((Binding) resource).getAccess() == Binding.AccessType.COPY)
 				continue;
-			
+
 			final String id = binding.getId();
 
 			final String path = bindings.lookup(BindingsManager.toBindingId(id, BindingsManager.EntryType.IMAGE));
@@ -1476,7 +1473,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				throw new BWFLAException("error occured in the last phase of device attachment")
 						.setId(this.getComponentId());
 			}
-		} catch (IndexOutOfBoundsException e) {
+		}
+		catch (IndexOutOfBoundsException e) {
 			throw new BWFLAException("Cannot change medium: invalid drive id given.", e)
 					.setId(this.getComponentId());
 		}
@@ -1623,22 +1621,23 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		final UiOptions options = config.getUiOptions();
 		if (options != null && options.getForwarding_system() != null) {
 			var ret = EmulatorBeanMode.valueOf(options.getForwarding_system());
-			if(ret == EmulatorBeanMode.HEADLESS && !this.isHeadlessSupported())
+			if (ret == EmulatorBeanMode.HEADLESS && !this.isHeadlessSupported())
 				return EmulatorBeanMode.SDLONP;
 			return ret;
 		}
 		else return EmulatorBeanMode.SDLONP;
 	}
 
-	protected void prepareUserData(MachineConfiguration environment) throws BWFLAException {
+	protected void prepareUserData(MachineConfiguration environment) throws BWFLAException
+	{
 		File src = new File(emulatorDataBase + getEmuContainerName(environment));
-		if(!src.exists()) {
+		if (!src.exists()) {
 			LOG.info("no user data folder found " + src.getAbsolutePath());
 			return;
 		}
 
 		File userData = new File(getDataDir().toFile(), getEmuContainerName(environment));
-		if(userData.exists())
+		if (userData.exists())
 			throw new BWFLAException("copied user data twice");
 
 		DeprecatedProcessRunner cp = new DeprecatedProcessRunner();
@@ -1646,7 +1645,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		cp.addArgument("-rv");
 		cp.addArgument(src.getAbsolutePath());
 		cp.addArgument(userData.getAbsolutePath());
-		if(!cp.execute())
+		if (!cp.execute())
 			throw new BWFLAException("preparing emulator user data failed.");
 	}
 
@@ -1655,7 +1654,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		try {
 			this.emuEnvironment = environment;
 			LOG.info(emuEnvironment.value());
-			for (AbstractDataResource resource: emuEnvironment.getAbstractDataResource())
+			for (AbstractDataResource resource : emuEnvironment.getAbstractDataResource())
 				this.prepareResource(resource);
 
 			prepareUserData(environment);
@@ -1666,7 +1665,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			UiOptions uiOptions = emuEnvironment.getUiOptions();
 			if (uiOptions != null) {
 				this.isPulseAudioEnabled = false;
-				if(uiOptions.getAudio_system() != null
+				if (uiOptions.getAudio_system() != null
 						&& !uiOptions.getAudio_system().isEmpty()
 						&& uiOptions.getAudio_system().equalsIgnoreCase("webrtc")) {
 					this.isPulseAudioEnabled = true;
@@ -1681,7 +1680,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					if (timeOptions.getEpoch() != null) {
 						long epoch = Long.parseLong(timeOptions.getEpoch());
 						this.setEmulatorTime(epoch);
-					} else if (timeOptions.getOffset() != null) {
+					}
+					else if (timeOptions.getOffset() != null) {
 						long offset = Long.parseLong(timeOptions.getEpoch());
 						this.setEmulatorTime(offset);
 					}
@@ -1689,16 +1689,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			this.setupEmulatorBackend();
-			
-			for(Drive drive: emuEnvironment.getDrive())
+
+			for (Drive drive : emuEnvironment.getDrive())
 				prepareDrive(drive);
 
-			for(Nic nic: emuEnvironment.getNic())
+			for (Nic nic : emuEnvironment.getNic())
 				prepareNic(nic);
 
 			this.finishRuntimeConfiguration();
 
-		} catch (IllegalArgumentException | IOException | JAXBException e) {
+		}
+		catch (IllegalArgumentException | IOException | JAXBException e) {
 			throw new BWFLAException("Could not set runtime information.", e)
 					.setId(this.getComponentId());
 		}
@@ -1728,7 +1729,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	 * @param driveType The drive type
 	 * @return The desired image format for the specified drive type
 	 */
-	protected XmountOutputFormat getImageFormatForDriveType(DriveType driveType) {
+	protected XmountOutputFormat getImageFormatForDriveType(DriveType driveType)
+	{
 		// as default, we use raw images for everything
 		return XmountOutputFormat.RAW;
 	}
@@ -1736,8 +1738,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	/** Setups the emulator's backend */
 	private void setupEmulatorBackend()
 	{
-		switch (emuBeanMode)
-		{
+		switch (emuBeanMode) {
 			case SDLONP:
 				this.setupEmulatorForSDLONP();
 				break;
@@ -1807,8 +1808,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	protected void setEmulatorTimeOffset(long offset)
 	{
-	//	emuRunner.addEnvVariable("FAKE_TIME_OFFSET", ""+offset);
-	//	emuRunner.addEnvVariable("LD_PRELOAD", "/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1");
+		//	emuRunner.addEnvVariable("FAKE_TIME_OFFSET", ""+offset);
+		//	emuRunner.addEnvVariable("LD_PRELOAD", "/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1");
 	}
 
 	/** Setups the emulator's environment variables and tunnel for SDLONP-Protocol. */
@@ -1839,7 +1840,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		emuConfig.setIoSocket(emusocket);
 
 		// HACK: Qemu uses a custom audio setup!
-		if (this instanceof QemuBean && this.isPulseAudioEnabled()	) {
+		if (this instanceof QemuBean && this.isPulseAudioEnabled()) {
 			emuRunner.getEnvVariables()
 					.remove("SDL_AUDIODRIVER");
 		}
@@ -1897,7 +1898,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			LOG.info("Waiting for emulator's detach-notification...");
 			try {
 				this.waitForClientDetachAck(10, TimeUnit.SECONDS);
-			} catch (Exception e) {
+			}
+			catch (Exception e) {
 				throw new BWFLAException("Waiting for emulator's detach-notification failed!", e)
 						.setId(this.getComponentId());
 			}
@@ -2156,8 +2158,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	/* ==================== PostScriptPrinter API ==================== */
 
-	public List<PrintJob> getPrintJobs() throws  BWFLAException{
-		if(printer == null)
+	public List<PrintJob> getPrintJobs() throws BWFLAException
+	{
+		if (printer == null)
 			return null;
 
 		return printer.getPrintJobs();
@@ -2167,13 +2170,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	public void takeScreenshot()
 	{
-		if(scrshooter != null)
+		if (scrshooter != null)
 			scrshooter.takeScreenshot();
 	}
 
 	public DataHandler getNextScreenshot()
 	{
-		if(scrshooter == null)
+		if (scrshooter == null)
 			return null;
 
 		byte[] data = scrshooter.getNextScreenshot();
@@ -2345,13 +2348,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	private void waitUntilPathExists(Path path, EmuCompState expstate) throws BWFLAException
 	{
-		LOG.info("Waiting for path '" + path.toString() +"'...");
+		LOG.info("Waiting for path '" + path.toString() + "'...");
 
 		final int timeout = 300000;  // in ms
 		final int waittime = 1000;  // in ms
 		for (int numretries = timeout / waittime; numretries > 0; --numretries) {
 			if (Files.exists(path)) {
-				LOG.info("Path '" + path.toString() +"' exists now");
+				LOG.info("Path '" + path.toString() + "' exists now");
 				return;
 			}
 
@@ -2367,7 +2370,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			this.ensureEmulatorRunning(msgsuffix);
 		}
 
-		throw new BWFLAException("Path '" + path.toString() +"' does not exist!")
+		throw new BWFLAException("Path '" + path.toString() + "' does not exist!")
 				.setId(this.getComponentId());
 	}
 
@@ -2377,7 +2380,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		final DeprecatedProcessRunner waiter = new DeprecatedProcessRunner("/bin/sh");
 		waiter.addArguments("-c", "while ! sudo runc " +
-				"ps "  + this.getContainerId() + "; do :; done; while sudo runc ps " + this.getContainerId() + " | grep -q criu; do :; done");
+				"ps " + this.getContainerId() + "; do :; done; while sudo runc ps " + this.getContainerId() + " | grep -q criu; do :; done");
 		waiter.execute();
 	}
 
@@ -2390,7 +2393,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			ctlMsgWriter.send(emuCtlSocketName);
 		}
 	}
-	
+
 	private void waitForAttachedClient() throws IOException, InterruptedException
 	{
 		final int timeout = 1000;
@@ -2403,7 +2406,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				isClientAttachedFlag.set(true);
 				return;  // Notification received!
 			}
-			
+
 			final EmuCompState state = emuBeanState.fetch();
 			if (state != EmuCompState.EMULATOR_BUSY && state != EmuCompState.EMULATOR_RUNNING) {
 				LOG.warning("Expected state changed, abort attaching client to emulator!");
@@ -2516,13 +2519,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	}
 
 	@Deprecated
-	protected String lookupResource(String binding, XmountOutputFormat unused) throws BWFLAException, IOException {
+	protected String lookupResource(String binding, XmountOutputFormat unused) throws BWFLAException, IOException
+	{
 		return lookupResource(binding);
 	}
 
 	@Deprecated
 	protected String lookupResource(String binding, DriveType driveType)
-			throws BWFLAException, IOException {
+			throws BWFLAException, IOException
+	{
 		// this.getImageFormatForDriveType(driveType)
 		return this.lookupResource(binding);
 	}
@@ -2560,7 +2565,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// set up earlier, so no mounting, cow-ing or other tricks
 		// are necessary here.
 
-		if(drive.getData() == null || drive.getData().isEmpty())
+		if (drive.getData() == null || drive.getData().isEmpty())
 			return;
 
 		addDrive(drive);
@@ -2643,11 +2648,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	 */
 	protected void prepareNativeConfig(MachineConfiguration.NativeConfig nativeConfig)
 	{
-		if(nativeConfig != null)
-		{
+		if (nativeConfig != null) {
 			String nativeString = nativeConfig.getValue();
-			if(nativeConfig.getLinebreak() != null)
-			{
+			if (nativeConfig.getLinebreak() != null) {
 				nativeString = nativeString.replace("\n", "").replace("\r", "");
 				nativeString = nativeString.replace(nativeConfig.getLinebreak(), "\n");
 			}
@@ -2658,15 +2661,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			Pattern p = Pattern.compile("binding://(\\w*/?)|rom://(\\S+)");
 			Matcher m = p.matcher(nativeString);
 			StringBuffer sb = new StringBuffer();
-			while(m.find())
-			{
+			while (m.find()) {
 				String bindingPath;
 				try {
 					String res = m.group(1);
-					if(res == null) // should be a rom. but check again
+					if (res == null) // should be a rom. but check again
 					{
-						if(!m.group(0).startsWith("rom"))
-						{
+						if (!m.group(0).startsWith("rom")) {
 							LOG.info("could not resolve resource: " + m.group(0));
 							continue;
 						}
@@ -2674,13 +2675,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					}
 
 					bindingPath = this.lookupResource(res.trim());
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					LOG.severe("lookupResource with " + m.group(1) + " failed.");
 					LOG.log(Level.SEVERE, e.getMessage(), e);
 					continue;
 				}
-				if(bindingPath == null)
-				{
+				if (bindingPath == null) {
 					LOG.severe("lookupResource with " + m.group(1) + " failed.");
 					continue;
 				}
@@ -2701,26 +2702,37 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	public Tail getEmulatorStdOut()
 	{
-		LogConnector logCon = (LogConnector)getControlConnector(StdoutLogConnector.PROTOCOL);
-		if(logCon == null)
+		LogConnector logCon = (LogConnector) getControlConnector(StdoutLogConnector.PROTOCOL);
+		if (logCon == null)
 			return null;
 		return logCon.connect();
 	}
 
 	public Tail getEmulatorStdErr()
 	{
-		LogConnector logCon = (LogConnector)getControlConnector(StderrLogConnector.PROTOCOL);
-		if(logCon == null)
+		LogConnector logCon = (LogConnector) getControlConnector(StderrLogConnector.PROTOCOL);
+		if (logCon == null)
 			return null;
 		return logCon.connect();
 	}
 
 	public Tail getSikuliLogs(String componentId)
 	{
-		LogConnector logCon = (LogConnector)getControlConnector(StderrLogConnector.PROTOCOL);
-		if(logCon == null)
+		LogConnector logCon = (LogConnector) getControlConnector(StderrLogConnector.PROTOCOL);
+		if (logCon == null)
 			return null;
-		logCon.setLogPath(Path.of("/tmp-storage/emucomp-automation/sikuli").resolve(componentId).resolve("logs.txt"));
-		return logCon.connect();
+
+		Path logPath = Path.of("/tmp-storage/emucomp-automation/sikuli").resolve(componentId).resolve("logs.txt");
+
+		if (Files.exists(logPath)) {
+			LOG.info("Logging path for sikuli for this component exists!");
+			logCon.setLogPath(logPath);
+			return logCon.connect();
+		}
+		else {
+			LOG.info("Logging path for sikuli for this component does not exist yet!");
+			return null;
+		}
+
 	}
 }

@@ -98,9 +98,8 @@ public class SikuliUtils
 			throw new NotFoundException("Could not find directory for taskId " + taskId);
 		}
 		var response = new ProcessResultUrl();
-		if (Files.notExists(basePath.resolve("logs.txt"))) {
-
-			return response;
+		if (Files.notExists(basePath.resolve("url.txt"))) {
+			throw new NotFoundException("Could not find url.txt for taskId " + taskId);
 		}
 		else {
 			try {
@@ -108,7 +107,7 @@ public class SikuliUtils
 				return response;
 			}
 			catch (IOException e) {
-				throw new InternalServerErrorException("Could not read file, although log file is present");
+				throw new InternalServerErrorException("Could not read file, although url file is present");
 			}
 
 		}

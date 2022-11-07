@@ -33,26 +33,27 @@ public class ExecuteSikuliTask extends BlockingTask<Object>
 
 		Files.createFile(componentTxtPath);
 		Files.writeString(componentTxtPath, request.getComponentId());
-		var response = client.executeSikuliScript(request);
+		var executionResponse = client.executeSikuliScript(request);
+		var debugURL = client.getDebugURL();
 
-		if (response.getStatus() == 200) {
-			var result = response.readEntity(ProcessResultUrl.class);
+		log.info("Got response from emucomp backend, execution is stopped!");
+		var debugInfoBlobstoreUrl = debugURL.getUrl();
 
-			log.info("Got response from emucomp backend, execution is done!");
-			var debugInfoBlobstoreUrl = result.getUrl();
+		Path urlTxtPath = taskPath.resolve("url.txt");
+		Files.createFile(urlTxtPath);
+		Files.writeString(urlTxtPath, debugInfoBlobstoreUrl);
 
-			Path urlTxtPath = taskPath.resolve("url.txt");
-			Files.createFile(urlTxtPath);
-			Files.writeString(urlTxtPath, debugInfoBlobstoreUrl);
+		//TODO only download logs once? Screenshots aren't needed on the gateway
+		log.info("Downloading Debug info from " + debugInfoBlobstoreUrl + " to: " + taskPath);
+		//this is necessary to access logs instantly from the UI even after execution
+		//full debug information is passed via url written in url.txt always
+		SikuliUtils.extractTarFromBlobstore(taskPath, debugInfoBlobstoreUrl);
 
-			//TODO only download logs once? Screenshots aren't needed on the gateway
-			log.info("Downloading Debug info from " + debugInfoBlobstoreUrl + " to: " + taskPath);
-			SikuliUtils.extractTarFromBlobstore(taskPath, debugInfoBlobstoreUrl);
-
-			return response;
+		if(executionResponse.getStatus()==200){
+			return debugURL.getUrl();
 		}
 		else {
-			throw new InternalServerErrorException("Sikuli script did not complete with status code 200, but " + response.getStatus());
+			throw new InternalServerErrorException("Sikuli script did not complete with status code 200, but " + executionResponse.getStatus());
 		}
 
 	}

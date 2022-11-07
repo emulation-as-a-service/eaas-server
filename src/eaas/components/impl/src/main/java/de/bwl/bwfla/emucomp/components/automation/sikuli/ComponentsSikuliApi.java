@@ -67,11 +67,12 @@ public class ComponentsSikuliApi
 	@Secured(roles = {Role.PUBLIC})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public ProcessResultUrl postExecute(@PathParam("componentId") String componentId, SikuliExecutionRequest request) throws Exception
+	public Response postExecute(@PathParam("componentId") String componentId, SikuliExecutionRequest request) throws Exception
 	{
 		LOG.info("Got request to execute sikuli task for component " + componentId);
 		SikuliEmucompTasks.executeSikuliScriptInEmulatorContainer(componentId, request);
-		return SikuliEmucompTasks.getDebugFiles(componentId);
+		//return SikuliEmucompTasks.getDebugFiles(componentId);
+		return Response.ok().build();
 
 	}
 
@@ -116,9 +117,19 @@ public class ComponentsSikuliApi
 	public ProcessResultUrl getDebugInfo(@PathParam("componentId") String componentId) throws Exception
 	{
 		LOG.info("Got request for sikuli debug files for component " + componentId);
-		return SikuliEmucompTasks.getDebugFiles(componentId);
+		return SikuliEmucompTasks.getDebugURL(componentId);
 	}
 
+	//TODO for all, check if component is running here? Needs to be checked somewhere (is checked in client, but that is not enough)
+	@GET
+	@Path("/{componentId}/sikuli/screenshot")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getLatestScreenshot(@PathParam("componentId") String componentId) throws Exception
+	{
+		LOG.info("Got request for latest sikuli screenshot for component " + componentId);
+		return SikuliEmucompTasks.getLastScreenshot(componentId);
+	}
 
 }
 
