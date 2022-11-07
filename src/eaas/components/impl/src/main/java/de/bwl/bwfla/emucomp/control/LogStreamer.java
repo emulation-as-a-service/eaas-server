@@ -73,7 +73,13 @@ public class LogStreamer
 
 			EmulatorBean bean = (EmulatorBean) component;
 			Tail sikuliLogs = bean.getSikuliLogs(componentId);
-			return streamResponse(sikuliLogs);
+			if(null != sikuliLogs){
+				return streamResponse(sikuliLogs);
+			}
+			else {
+				throw new NotFoundException("Could not find log file for given component id!");
+			}
+
 		}
 		catch (BWFLAException error) {
 			throw new NotFoundException("Component not found: " + componentId);
@@ -93,16 +99,10 @@ public class LogStreamer
 					final int explen = Math.min(source.available(), buffer.length - 1);
 					final int curlen = 1 + source.read(buffer, 1, explen);
 					out.write(buffer, 0, curlen);
-					System.out.println(" --- Curlen is " + curlen);
-					for (int i = 0; i < curlen; i++) {
-						System.out.println(" Writing: " + buffer[i]);
-					}
-
 					out.flush();
 				}
 			}
 			finally {
-				System.out.println("Closing!");
 				out.close();
 				tail.cleanup();
 			}

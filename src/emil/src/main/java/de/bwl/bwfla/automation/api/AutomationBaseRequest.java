@@ -18,11 +18,11 @@ public abstract class AutomationBaseRequest
 	@JsonProperty("name")
 	protected String name;
 
-	@JsonProperty("targetId")
-	protected String targetId;
+	@JsonProperty("environmentId")
+	protected String environmentId;
 
-	@JsonProperty(value = "targetIsComponent", defaultValue = "false")
-	protected boolean targetIsComponent;
+	@JsonProperty("componentId")
+	protected String componentId;
 
 	@JsonProperty("outputType") // Files or Environment
 	protected String outputType;
@@ -48,24 +48,24 @@ public abstract class AutomationBaseRequest
 		this.name = name;
 	}
 
-	public String getTargetId()
+	public String getEnvironmentId()
 	{
-		return targetId;
+		return environmentId;
 	}
 
-	public void setTargetId(String targetId)
+	public void setEnvironmentId(String environmentId)
 	{
-		this.targetId = targetId;
+		this.environmentId = environmentId;
 	}
 
-	public boolean isTargetIsComponent()
+	public String getComponentId()
 	{
-		return targetIsComponent;
+		return componentId;
 	}
 
-	public void setTargetIsComponent(boolean targetIsComponent)
+	public void setComponentId(String componentId)
 	{
-		this.targetIsComponent = targetIsComponent;
+		this.componentId = componentId;
 	}
 
 	public String getOutputType()

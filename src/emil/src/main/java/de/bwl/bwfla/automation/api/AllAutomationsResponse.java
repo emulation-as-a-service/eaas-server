@@ -28,6 +28,9 @@ public class AllAutomationsResponse
 		@JsonProperty("hasError")
 		private boolean hasError;
 
+		@JsonProperty("componentId")
+		private String componentId;
+
 		public PythonResultFile()
 		{
 
@@ -72,6 +75,16 @@ public class AllAutomationsResponse
 		{
 			this.hasError = hasError;
 		}
+
+		public String getComponentId()
+		{
+			return componentId;
+		}
+
+		public void setComponentId(String componentId)
+		{
+			this.componentId = componentId;
+		}
 	}
 
 
@@ -96,6 +109,9 @@ public class AllAutomationsResponse
 
 		@JsonProperty("originalEnvId")
 		private String originalEnvId;
+
+		@JsonProperty("componentId")
+		private String componentId;
 
 		@JsonProperty("executable")
 		private String executable;
@@ -198,6 +214,16 @@ public class AllAutomationsResponse
 		public void setOriginalEnvId(String originalEnvId)
 		{
 			this.originalEnvId = originalEnvId;
+		}
+
+		public String getComponentId()
+		{
+			return componentId;
+		}
+
+		public void setComponentId(String componentId)
+		{
+			this.componentId = componentId;
 		}
 
 		public String getExecutable()

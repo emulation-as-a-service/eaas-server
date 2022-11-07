@@ -14,11 +14,17 @@ import org.apache.commons.io.IOUtils;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 
 public class SikuliEmucompTasks
@@ -125,31 +131,18 @@ public class SikuliEmucompTasks
 		sikuliRunner.printStdErr();
 		sikuliRunner.cleanup();
 
-		DeprecatedProcessRunner screenshotRunner = new DeprecatedProcessRunner("sudo");
-		screenshotRunner.addArgument("/libexec/findSikuliScreenshots.sh");
-		screenshotRunner.addArgument(info.getPid());
-		screenshotRunner.addArgument(parentName.toString());
-		screenshotRunner.addArgument(componentId);
-		screenshotRunner.execute();
-
+		copyScreenshots(componentId, info.getPid(), parentName);
 
 		if (success == 0) {
 			LOG.info("--------------- SUCCESSFULLY EXECUTED SIKULI SCRIPT! -----------------");
-
-			if (request.isHeadless()) {
-
-				//stopComponentAfterExecution();
-			}
 		}
 		else {
 			LOG.info("Sikuli returned Status code: " + success);
-			if (request.isHeadless()) {
-				//stopComponentAfterExecution();
-			}
 			throw new BWFLAException("Sikuli exited with non-zero status code!");
 		}
 
 	}
+
 
 	public static void uploadSikuliScriptToEmulatorContainer(String componentId, String blobstoreURL) throws BWFLAException
 	{
@@ -211,7 +204,7 @@ public class SikuliEmucompTasks
 
 	}
 
-	public static ProcessResultUrl getDebugFiles(String componentId) throws Exception
+	public static ProcessResultUrl getDebugURL(String componentId) throws Exception
 	{
 		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
 		tarRunner.setWorkingDirectory(sikuliBasePath.resolve(componentId));
@@ -246,4 +239,62 @@ public class SikuliEmucompTasks
 		return returnResult;
 	}
 
+	public static Response getLastScreenshot(String componentId) throws Exception
+	{
+		//TODO better util functions to get folders...
+		LOG.info("Getting latest screenshot...");
+		RuncStateInformation info = RuncStateInformation.getRuncStateInformationForComponent(componentId);
+
+		Path tmpPath = Path.of(info.getBundle());
+		Path scriptPathAppserver = SikuliUtils.getSikuliFilenameForDirectory(tmpPath.resolve("data/uploads"));
+
+		Path parentDir = scriptPathAppserver.getParent();
+		Path parentName = parentDir.getName(parentDir.getNameCount() - 1);
+
+		copyScreenshots(componentId, info.getPid(), parentName);
+
+
+//		Path finalDir = Path.of("/proc").resolve(info.getPid()).resolve(Path.of("root/emucon/data/uploads")).resolve(parentName);
+		Path finalDir = sikuliBasePath.resolve(componentId);
+
+		LOG.info("Searching for screenshots in " + finalDir);
+		final Pattern scPattern = Pattern.compile(".*sc\\d+\\.png");
+
+		Optional<Path> scriptPathOpt = Files.find(finalDir,
+						Integer.MAX_VALUE,
+						(path, basicFileAttributes) -> scPattern.matcher(path.toString()).matches())
+						.max(Comparator.comparingLong(f -> f.toFile().lastModified()));
+
+		if (scriptPathOpt.isPresent()) {
+			Path lastScreenshot = scriptPathOpt.get();
+			LOG.info("Got path for latest screenshot: " + lastScreenshot);
+			StreamingOutput stream = out -> {
+				try (out) {
+					out.write(Files.readAllBytes(lastScreenshot));
+					out.flush();
+				}
+				finally {
+					System.out.println("Closing!");
+				}
+			};
+
+			return Response.status(Response.Status.OK)
+					.entity(stream).build();
+		}
+		else {
+			LOG.info("Not screenshots found (yet)!");
+			throw new NotFoundException("Could not get Screenshot for componentId " + componentId + ".");
+		}
+
+	}
+
+	private static void copyScreenshots(String componentId, String pid, Path targetDir)
+	{
+		DeprecatedProcessRunner screenshotRunner = new DeprecatedProcessRunner("sudo");
+		screenshotRunner.addArgument("/libexec/findSikuliScreenshots.sh");
+		screenshotRunner.addArgument(pid);
+		screenshotRunner.addArgument(targetDir.toString());
+		screenshotRunner.addArgument(componentId);
+		screenshotRunner.execute();
+	}
 }
