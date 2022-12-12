@@ -144,6 +144,7 @@ public class HeadlessSession extends Session
 					try {
 						ComponentResponse response = endpoint.getState(component);
 						String componentState = ((ComponentStateResponse) response).getState();
+						log.info("State for component " + component + ": " + componentState);
 						if (componentState.equals(ComponentState.STOPPED.name())) {
 							stopEnvironment(endpoint, log, component);
 							return true;
@@ -199,8 +200,16 @@ public class HeadlessSession extends Session
 	private void stopEnvironment(Components endpoint, Logger log, String component) throws BWFLAException
 	{
 		var stopResponse = sendEnvironmentStopRequest(component);
-		this.outputTasks.put(component, stopResponse.getUrl());
-		log.info(" Got response from stopping component (to complete): " + stopResponse.getUrl());
+
+			if (stopResponse.getUrl()==null){
+				var msg = "Did not get response url after stopping component. Please check if output was enabled for the execution.";
+				log.warning(msg);
+				this.outputTasks.put(component, msg);
+			}
+			else{
+				log.info("Got response from stopping component (to complete): " + stopResponse.getUrl());
+				this.outputTasks.put(component, stopResponse.getUrl());
+		}
 	}
 
 	private void saveEnvironment(Components endpoint, ComputeRequest.ComponentSpec c)
@@ -252,6 +261,7 @@ public class HeadlessSession extends Session
 
 	private ProcessResultUrl sendEnvironmentStopRequest(String componentId) throws BWFLAException
 	{
+		//TODO does this work in distributed mode?
 		var client = ClientBuilder.newClient();
 		var baseUrl = "http://eaas:8080/emil";
 		var target = client.target(baseUrl);

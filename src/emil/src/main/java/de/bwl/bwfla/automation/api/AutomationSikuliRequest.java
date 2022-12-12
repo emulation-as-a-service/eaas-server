@@ -27,8 +27,9 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 	@JsonProperty("resolutionY")
 	protected int resolutionY;
 
-	@JsonProperty(value = "shouldCompute", defaultValue = "true")
-	protected boolean shouldCompute;
+	@JsonProperty("sessionId")
+	protected String sessionId;
+
 
 	public AutomationSikuliRequest()
 	{
@@ -84,13 +85,13 @@ public class AutomationSikuliRequest extends AutomationBaseRequest
 		this.sikuliParams = sikuliParams;
 	}
 
-	public boolean isShouldCompute()
+	public String getSessionId()
 	{
-		return shouldCompute;
+		return sessionId;
 	}
 
-	public void setShouldCompute(boolean shouldCompute)
+	public void setSessionId(String sessionId)
 	{
-		this.shouldCompute = shouldCompute;
+		this.sessionId = sessionId;
 	}
 }
