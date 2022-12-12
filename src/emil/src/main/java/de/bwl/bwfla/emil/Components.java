@@ -835,6 +835,7 @@ public class Components {
             }
 
             if (machineDescription.hasOutput()){
+                LOG.info("Machine with env id " + chosenEnv.getId() + " has output available!");
                 EmulationEnvironmentHelper.registerDriveForOutput((MachineConfiguration) chosenEnv, machineDescription.getOutputDriveId());
             }
 
