@@ -1,9 +1,9 @@
 package de.bwl.bwfla.sikuli.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openslx.automation.api.sikuli.SikuliUploadRequest;
-import com.openslx.automation.api.sikuli.SikuliUploadResponse;
-import com.openslx.automation.client.sikuli.SikuliClient;
+import com.openslx.eaas.automation.api.sikuli.SikuliUploadRequest;
+import com.openslx.eaas.automation.api.sikuli.SikuliUploadResponse;
+import com.openslx.eaas.automation.client.sikuli.SikuliClient;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.sikuli.SikuliUtils;

@@ -6,7 +6,7 @@
     <description>API library for the automation module.</description>
     <packaging>jar</packaging>
     <parent>
-        <groupId>de.bwl.bwfla</groupId>
+        <groupId>com.openslx.eaas</groupId>
         <artifactId>automation-all</artifactId>
         <version>0.0.1-SNAPSHOT</version>
         <relativePath>..</relativePath>

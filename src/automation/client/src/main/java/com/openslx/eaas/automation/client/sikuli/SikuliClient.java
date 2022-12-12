@@ -1,6 +1,6 @@
-package com.openslx.automation.client.sikuli;
+package com.openslx.eaas.automation.client.sikuli;
 
-import com.openslx.automation.api.sikuli.*;
+import com.openslx.eaas.automation.api.sikuli.*;
 import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 
 import javax.ws.rs.client.ClientBuilder;

@@ -1,10 +1,10 @@
 package de.bwl.bwfla.emucomp.components.automation.sikuli;
 
 
-import com.openslx.automation.api.sikuli.SikuliExecutionRequest;
-import com.openslx.automation.api.sikuli.SikuliLogResponse;
-import com.openslx.automation.api.sikuli.SikuliUploadRequest;
-import com.openslx.automation.impl.sikuli.SikuliEmucompTasks;
+import com.openslx.eaas.automation.api.sikuli.SikuliExecutionRequest;
+import com.openslx.eaas.automation.api.sikuli.SikuliLogResponse;
+import com.openslx.eaas.automation.api.sikuli.SikuliUploadRequest;
+import com.openslx.eaas.automation.impl.sikuli.SikuliEmucompTasks;
 import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.Role;

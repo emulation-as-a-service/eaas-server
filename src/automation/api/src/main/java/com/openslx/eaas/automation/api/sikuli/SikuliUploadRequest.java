@@ -1,4 +1,4 @@
-package com.openslx.automation.api.sikuli;
+package com.openslx.eaas.automation.api.sikuli;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -14,6 +14,9 @@ public class SikuliUploadRequest implements SikuliRequest
 
 	@JsonProperty("blobStoreUrl")
 	private String blobStoreUrl;
+
+	@JsonProperty("objectId")
+	private String objectId;
 
 	@JsonProperty(value = "computeUiFields", defaultValue = "false")
 	private boolean computeUiFields;
@@ -46,5 +49,15 @@ public class SikuliUploadRequest implements SikuliRequest
 	public void setComputeUiFields(boolean computeUiFields)
 	{
 		this.computeUiFields = computeUiFields;
+	}
+
+	public String getObjectId()
+	{
+		return objectId;
+	}
+
+	public void setObjectId(String objectId)
+	{
+		this.objectId = objectId;
 	}
 }

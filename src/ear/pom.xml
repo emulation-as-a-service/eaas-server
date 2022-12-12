@@ -355,16 +355,19 @@
 			<id>automation</id>
 			<dependencies>
 				<dependency>
-					<groupId>de.bwl.bwfla</groupId>
+					<groupId>com.openslx.eaas</groupId>
 					<artifactId>automation-api</artifactId>
+					<version>${project.version}</version>
 				</dependency>
 				<dependency>
-					<groupId>de.bwl.bwfla</groupId>
+					<groupId>com.openslx.eaas</groupId>
 					<artifactId>automation-client</artifactId>
+					<version>${project.version}</version>
 				</dependency>
 				<dependency>
-					<groupId>de.bwl.bwfla</groupId>
+					<groupId>com.openslx.eaas</groupId>
 					<artifactId>automation-impl</artifactId>
+					<version>${project.version}</version>
 				</dependency>
 			</dependencies>
 		</profile>

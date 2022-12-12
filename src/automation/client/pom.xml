@@ -6,7 +6,7 @@
     <description>A HTTP client module for the Automation API.</description>
     <packaging>jar</packaging>
     <parent>
-        <groupId>de.bwl.bwfla</groupId>
+        <groupId>com.openslx.eaas</groupId>
         <artifactId>automation-all</artifactId>
         <version>0.0.1-SNAPSHOT</version>
         <relativePath>..</relativePath>
@@ -17,8 +17,10 @@
             <artifactId>common</artifactId>
         </dependency>
         <dependency>
-            <groupId>de.bwl.bwfla</groupId>
+            <groupId>com.openslx.eaas</groupId>
             <artifactId>automation-api</artifactId>
+            <version>${project.version}</version>
+
         </dependency>
         <dependency>
             <groupId>jakarta.jws</groupId>
