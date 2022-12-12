@@ -1,9 +1,12 @@
 package de.bwl.bwfla.sikuli;
 
-import com.openslx.automation.api.sikuli.*;
+import com.openslx.eaas.automation.api.sikuli.SikuliCreateScriptRequest;
+import com.openslx.eaas.automation.api.sikuli.SikuliDownloadRequest;
+import com.openslx.eaas.automation.api.sikuli.SikuliExecutionRequest;
+import com.openslx.eaas.automation.api.sikuli.SikuliUploadRequest;
 import de.bwl.bwfla.apiutils.WaitQueueResponse;
 
-import com.openslx.automation.client.sikuli.SikuliClient;
+import com.openslx.eaas.automation.client.sikuli.SikuliClient;
 import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 import de.bwl.bwfla.common.datatypes.WaitQueueUserData;
 import de.bwl.bwfla.common.exceptions.BWFLAException;

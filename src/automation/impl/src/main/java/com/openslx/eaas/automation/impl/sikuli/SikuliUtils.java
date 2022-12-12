@@ -1,4 +1,4 @@
-package com.openslx.automation.impl.sikuli;
+package com.openslx.eaas.automation.impl.sikuli;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;

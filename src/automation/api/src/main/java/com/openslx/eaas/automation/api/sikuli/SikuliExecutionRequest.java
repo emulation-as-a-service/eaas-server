@@ -1,4 +1,4 @@
-package com.openslx.automation.api.sikuli;
+package com.openslx.eaas.automation.api.sikuli;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,19 +1,22 @@
-package com.openslx.automation.impl.sikuli;
+package com.openslx.eaas.automation.impl.sikuli;
 
 import com.openslx.eaas.common.util.RuncStateInformation;
 import de.bwl.bwfla.api.blobstore.BlobStore;
-import com.openslx.automation.api.sikuli.SikuliExecutionRequest;
-import com.openslx.automation.api.sikuli.SikuliLogResponse;
+import com.openslx.eaas.automation.api.sikuli.SikuliExecutionRequest;
+import com.openslx.eaas.automation.api.sikuli.SikuliLogResponse;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
+import de.bwl.bwfla.emucomp.api.FileCollection;
 import org.apache.commons.io.IOUtils;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
+import javax.ws.rs.HttpMethod;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;

@@ -1,7 +1,7 @@
 package de.bwl.bwfla.sikuli;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
-import com.openslx.automation.api.sikuli.SikuliLogResponse;
+import com.openslx.eaas.automation.api.sikuli.SikuliLogResponse;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;

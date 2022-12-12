@@ -87,8 +87,10 @@
 			<artifactId>preservica-client</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>de.bwl.bwfla</groupId>
+			<groupId>com.openslx.eaas</groupId>
 			<artifactId>automation-client</artifactId>
+			<version>${project.version}</version>
+
 		</dependency>
 		<dependency>
 			<groupId>com.webcohesion.enunciate</groupId>

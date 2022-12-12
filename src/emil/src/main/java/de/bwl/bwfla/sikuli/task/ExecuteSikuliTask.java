@@ -1,8 +1,7 @@
 package de.bwl.bwfla.sikuli.task;
 
-import com.openslx.automation.api.sikuli.SikuliExecutionRequest;
-import com.openslx.automation.client.sikuli.SikuliClient;
-import de.bwl.bwfla.common.datatypes.ProcessResultUrl;
+import com.openslx.eaas.automation.api.sikuli.SikuliExecutionRequest;
+import com.openslx.eaas.automation.client.sikuli.SikuliClient;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.sikuli.SikuliUtils;
 

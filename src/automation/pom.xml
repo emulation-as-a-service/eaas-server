@@ -2,9 +2,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <artifactId>automation-all</artifactId>
+    <groupId>com.openslx.eaas</groupId>
     <packaging>pom</packaging>
     <name>automation-all</name>
-    <description>Automation parent project.</description>
+    <description>Automation parent project</description>
     <parent>
         <groupId>de.bwl.bwfla</groupId>
         <artifactId>root</artifactId>
