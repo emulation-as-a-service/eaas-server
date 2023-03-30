@@ -1,5 +1,6 @@
 package de.bwl.bwfla.objectarchive.datatypes;
 
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.emucomp.api.Binding;
@@ -9,17 +10,18 @@ import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import gov.loc.mets.*;
 import org.w3c.dom.Element;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
-import javax.xml.transform.stream.StreamSource;
 import java.io.File;
-import java.io.StringReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static de.bwl.bwfla.common.utils.METS.MetsUtil.MetsEaasConstant.FILE_GROUP_OBJECTS;
+
 
 public class MetsObject {
 
@@ -148,6 +150,9 @@ public class MetsObject {
         if (metsRoot.getFileSec() != null) {
             List<MetsType.FileSec.FileGrp> fileGrpList = metsRoot.getFileSec().getFileGrp();
             for (MetsType.FileSec.FileGrp fileGrp : fileGrpList) {
+                if (!fileGrp.getUSE().equals(FILE_GROUP_OBJECTS.toString()))
+                    continue;  // skip all other file-groups for now!
+
                 for (FileType file : fileGrp.getFile()) {
                     try {
                         ObjectFile of = new ObjectFile();
@@ -163,15 +168,15 @@ public class MetsObject {
                         objectFiles.put(of.id, of);
                         // log.info(of.toString());
                     }
-                    catch (MetsObjectMetadataException e)
-                    {
-                        log.warning("caught exception " + e.getMessage());
+                    catch (MetsObjectMetadataException error) {
+                        final var message = "Processing METS with ID '" + this.getId() + "' failed!";
+                        log.log(Level.WARNING, message, error);
                     }
                 }
             }
         }
         else
-            log.warning("no files section found");
+            log.warning("No files found for METS with ID '" + this.getId() + "'!");
 
         // extracting Wikidata information
         List<MdSecType> dmdList = metsRoot.getDmdSec();
@@ -233,7 +238,7 @@ public class MetsObject {
             }
         }
         if(of.fileType == null && of.mediumType == null)
-            throw new MetsObjectMetadataException("Unknown file format/mediaType...");
+            throw new MetsObjectMetadataException("Unknown file format/media-type for file '" + file.getID() + "'...");
     }
 
     /*
@@ -324,11 +329,9 @@ public class MetsObject {
         if(metsdata == null)
             throw new BWFLAException("no mets data available: null");
 
-        JAXBContext jc = null;
         try {
-            jc = JAXBContext.newInstance(Mets.class);
-            Unmarshaller unmarshaller = jc.createUnmarshaller();
-            this.metsRoot = (Mets) unmarshaller.unmarshal(new StreamSource(new StringReader(metsdata)));
+            this.metsRoot = DataUtils.xml()
+                    .read(metsdata, Mets.class);
         } catch (JAXBException e) {
             throw new BWFLAException(e);
         }
@@ -341,10 +344,10 @@ public class MetsObject {
         if (!metsFile.exists())
             throw new BWFLAException("METS file not found: " + metsFile);
 
-        JAXBContext jc = null;
         try {
-            jc = JAXBContext.newInstance(Mets.class);
-            Unmarshaller unmarshaller = jc.createUnmarshaller();
+            final Unmarshaller unmarshaller = DataUtils.xml()
+                    .unmarshaller(Mets.class);
+
             this.metsRoot = (Mets) unmarshaller.unmarshal(metsFile);
         } catch (JAXBException e) {
             throw new BWFLAException(e);
@@ -355,10 +358,10 @@ public class MetsObject {
     }
 
     public MetsObject(Element element) throws BWFLAException {
-        JAXBContext jc = null;
         try {
-            jc = JAXBContext.newInstance(Mets.class);
-            Unmarshaller unmarshaller = jc.createUnmarshaller();
+            final Unmarshaller unmarshaller = DataUtils.xml()
+                    .unmarshaller(Mets.class);
+
             this.metsRoot = (Mets) unmarshaller.unmarshal(element);
         } catch (JAXBException e) {
             throw new BWFLAException(e);

@@ -19,9 +19,12 @@
 
 package de.bwl.bwfla.emil;
 
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
 import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.common.util.MultiCounter;
+import com.openslx.eaas.generalization.ImageGeneralizationPatchDescription;
+import com.openslx.eaas.generalization.ImageGeneralizationPatchResponse;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.ImageArchiveMappers;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
@@ -37,11 +40,12 @@ import com.openslx.eaas.migration.IMigratable;
 import com.openslx.eaas.migration.MigrationRegistry;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
+import com.openslx.eaas.generalization.ImageGeneralizationClient;
+import com.openslx.eaas.generalization.ImageGeneralizationPatchRequest;
 import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.DefaultEnvironmentResponse;
@@ -50,8 +54,6 @@ import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emil.datatypes.EnvironmentCreateRequest;
 import de.bwl.bwfla.emil.datatypes.EnvironmentDeleteRequest;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
-import de.bwl.bwfla.emil.datatypes.ImageGeneralizationPatchRequest;
-import de.bwl.bwfla.emil.datatypes.ImageGeneralizationPatchResponse;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
@@ -67,6 +69,8 @@ import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emil.utils.ImportCounts;
+import de.bwl.bwfla.emil.utils.LegacyImageArchiveConfigIterator;
+import de.bwl.bwfla.emil.utils.LegacyImageArchiveUtils;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
@@ -76,6 +80,8 @@ import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
@@ -88,6 +94,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -96,7 +103,12 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
@@ -127,6 +139,9 @@ public class EnvironmentRepository extends EmilRest
 	@Inject
 	private TaskManager taskManager = null;
 
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private ExecutorService executor;
+
 	@Inject
 	@AuthenticatedUser
 	private UserContext authenticatedUser = null;
@@ -135,6 +150,8 @@ public class EnvironmentRepository extends EmilRest
 	private ObjectClassification classification = null;
 
 	private SoftwareArchiveHelper swHelper;
+
+	private ImageGeneralizationClient imageGeneralization;
 
 	@Inject
 	private EmilObjectData objects;
@@ -147,9 +164,24 @@ public class EnvironmentRepository extends EmilRest
 			imagearchive = emilEnvRepo.getImageArchive();
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
+
+			final Supplier<String> usertoken = () -> this.getUserContext().getToken();
+			imageGeneralization = ImageGeneralizationClient.create(usertoken);
 		}
 		catch (Exception error) {
 			throw new RuntimeException(error);
+		}
+	}
+
+	@PreDestroy
+	private void destroy()
+	{
+		try {
+			if (imageGeneralization != null)
+				imageGeneralization.close();
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Closing generalization-patches client failed!", error);
 		}
 	}
 
@@ -1201,12 +1233,13 @@ public class EnvironmentRepository extends EmilRest
 		@GET
 		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
-		public List<ImageGeneralizationPatchDescription> list() throws BWFLAException
+		public Streamable<ImageGeneralizationPatchDescription> list() throws BWFLAException
 		{
 			LOG.info("Listing image-generalization patches...");
-
-			// TODO: fix response in case of errors!
-			return envdb.getImageGeneralizationPatches();
+			return imageGeneralization.api()
+					.v1()
+					.patches()
+					.list();
 		}
 
 		/** Try to apply a patch to the specified image. */
@@ -1215,44 +1248,14 @@ public class EnvironmentRepository extends EmilRest
 		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response apply(@PathParam("patchId") String patchId, ImageGeneralizationPatchRequest request)
+		public ImageGeneralizationPatchResponse apply(@PathParam("patchId") String patchId, ImageGeneralizationPatchRequest request)
+				throws BWFLAException
 		{
 			LOG.info("Applying image-generalization patch...");
-			try {
-				final var origImage = imagearchive.api()
-						.v2()
-						.metadata(MetaDataKindV2.IMAGES)
-						.fetch(request.getImageId(), ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
-
-				// TODO: port patching code to use new image-achive!
-				final String newImageId = (request.getArchive() != null) ?
-						envdb.createPatchedImage(request.getArchive(), request.getImageId(), request.getImageType(), patchId)
-						: envdb.createPatchedImage(request.getImageId(), request.getImageType(), patchId);
-
-				final var newImage = new ImageMetaData()
-						.setId(newImageId)
-						.setFileSystemType(origImage.fileSystemType())
-						.setLabel(origImage.label() + " (generalized)")
-						.setCategory(request.getImageType().value());
-
-				final var options = new ReplaceOptionsV2()
-						.setLocation(request.getArchive());
-
-				imagearchive.api()
-						.v2()
-						.metadata(MetaDataKindV2.IMAGES)
-						.replace(newImageId, newImage, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
-
-				final var response = new ImageGeneralizationPatchResponse();
-				response.setStatus("0");
-				response.setImageId(newImageId);
-				return Response.ok()
-						.entity(response)
-						.build();
-			}
-			catch (Throwable error) {
-				return EnvironmentRepository.internalErrorResponse(error);
-			}
+			return imageGeneralization.api()
+					.v1()
+					.patches()
+					.apply(patchId, request);
 		}
 	}
 
@@ -1504,10 +1507,146 @@ public class EnvironmentRepository extends EmilRest
 	@Override
 	public void register(@Observes MigrationRegistry migrations) throws Exception
 	{
+		migrations.register("remove-published-duplicates-from-legacy-image-archive-v1", this::removePublishedDuplicatesFromLegacyImageArchiveV1);
+		migrations.register("rebase-legacy-images-v1", this::rebaseLegacyImagesV1);
 		migrations.register("import-legacy-image-index", this::importLegacyImageIndex);
 		migrations.register("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
 		migrations.register("import-legacy-image-archive-v1", this::importLegacyImageArchiveV1);
 		migrations.register("import-legacy-emulator-archive-v1", this::importLegacyEmulatorArchiveV1);
+	}
+
+	private void removePublishedDuplicatesFromLegacyImageArchiveV1(MigrationConfig mc) throws Exception
+	{
+		class LegacyImageArchive
+		{
+			private final String name;
+			private final Map<String, java.nio.file.Path> images;
+			private final Map<String, java.nio.file.Path> metadata;
+
+			public LegacyImageArchive(String name)
+			{
+				this.name = name;
+				this.images = new HashMap<>();
+				this.metadata = new HashMap<>();
+			}
+
+			public boolean remove(String id, Map<String, java.nio.file.Path> entries) throws IOException
+			{
+				final var path = entries.remove(id);
+				if (path == null)
+					return false;
+
+				final var result = Files.deleteIfExists(path);
+				if (result)
+					LOG.info("Removed duplicate at: " + path);
+
+				return result;
+			}
+		}
+
+		final var archives = new HashMap<String, LegacyImageArchive>();
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
+			final var name = config.get("name");
+			if (name.contentEquals("emulators"))
+				continue;
+
+			final var basedir = Paths.get(config.get("basepath"));
+			final var archive = new LegacyImageArchive(name);
+
+			LOG.info("Listing entries in legacy image-archive (" + name + ")...");
+			for (final var kind : LegacyImageArchiveUtils.ImageKind.values()) {
+				LegacyImageArchiveUtils.list(basedir.resolve("meta-data"), kind, archive.metadata);
+				LegacyImageArchiveUtils.list(basedir.resolve("images"), kind, archive.images);
+			}
+
+			archives.put(name, archive);
+		}
+
+		final var counter = ImportCounts.counter();
+
+		final BiConsumer<String, java.nio.file.Path> metadataDuplicateRemover = (id, path) -> {
+			for (final var archive : archives.values()) {
+				try {
+					if (archive.remove(id, archive.metadata))
+						counter.increment(ImportCounts.IMPORTED);
+				}
+				catch (Exception error) {
+					LOG.log(Level.WARNING, "Removing metadata duplicate of '" + id + "' failed!", error);
+					counter.increment(ImportCounts.FAILED);
+				}
+			}
+		};
+
+		final BiConsumer<String, java.nio.file.Path> imageDuplicateRemover = (id, path) -> {
+			for (final var archive : archives.values()) {
+				try {
+					if (archive.remove(id, archive.images))
+						counter.increment(ImportCounts.IMPORTED);
+				}
+				catch (Exception error) {
+					LOG.log(Level.WARNING, "Removing image duplicate of '" + id + "' failed!", error);
+					counter.increment(ImportCounts.FAILED);
+				}
+			}
+		};
+
+		LOG.info("Removing published duplicates in legacy image-archive...");
+		final var publicImageArchive = archives.remove("public");
+		publicImageArchive.metadata.forEach(metadataDuplicateRemover);
+		publicImageArchive.images.forEach(imageDuplicateRemover);
+
+		final var numRemoved = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		final var maxFailureRate = MigrationUtils.getFailureRate(mc);
+		LOG.info("Removed " + numRemoved + " duplicate(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numRemoved + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Removing published duplicates failed!");
+	}
+
+	private void rebaseLegacyImagesV1(MigrationConfig mc) throws Exception
+	{
+		final var images = new HashMap<String, java.nio.file.Path>();
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
+			final var name = config.get("name");
+			final var basedir = Paths.get(config.get("basepath"), "images");
+			LOG.info("Listing images in legacy image-archive (" + name + ")...");
+			for (final var kind : LegacyImageArchiveUtils.ImageKind.values())
+				LegacyImageArchiveUtils.list(basedir, kind, images);
+		}
+
+		// bfmap: image-id -> backing-file-id
+		final var bfmap = new ConcurrentHashMap<String, String>();
+		final var failedImageIds = new HashSet<String>();
+		final var counter = ImportCounts.counter();
+
+		final Consumer<String> rebaser = (id) -> {
+			try {
+				LegacyImageArchiveUtils.fixBackingFileRef(id, images, bfmap, LOG);
+				counter.increment(ImportCounts.IMPORTED);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Rebasing image '" + id + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+				failedImageIds.add(id);
+			}
+		};
+
+		LOG.info("Rebasing images in legacy image-archive...");
+		final var imageids = images.keySet();
+		ParallelProcessors.consumer(rebaser)
+				.consume(imageids.iterator(), executor);
+
+		final var numRebased = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		final var maxFailureRate = MigrationUtils.getFailureRate(mc);
+		LOG.info("Rebased " + numRebased + " image(s), failed " + numFailed);
+		if (!failedImageIds.isEmpty())
+			LOG.warning(LegacyImageArchiveUtils.summarize(bfmap, failedImageIds));
+
+		if (!MigrationUtils.acceptable(numRebased + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Rebasing legacy images failed!");
 	}
 
 	private void importLegacyImageIndex(MigrationConfig mc) throws BWFLAException
@@ -1618,13 +1757,9 @@ public class EnvironmentRepository extends EmilRest
 
 	private void importLegacyImageArchiveV1(MigrationConfig mc) throws Exception
 	{
-		for (int i = 0; true; ++i) {
-			final var prefix = ConfigHelpers.toListKey("imagearchive.backends", i, ".");
-			final var config = ConfigHelpers.filter(ConfigurationProvider.getConfiguration(), prefix);
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
 			final var name = config.get("name");
-			if (name == null)
-				break;
-
 			if (name.equals("emulators"))
 				continue;
 
@@ -1711,9 +1846,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter, importer)
+					.consume(files, executor);
 		}
 	}
 
@@ -1760,21 +1897,19 @@ public class EnvironmentRepository extends EmilRest
 
 		final Consumer<java.nio.file.Path> importer = (file) -> {
 			final var id = file.getFileName().toString();
-			// first, update backing file's URL in-place
+			// first, check backing file reference
 			try {
 				final var info = new ImageInformation(file.toString(), LOG);
 				if (info.hasBackingFile()) {
 					final var backingFileUrl = info.getBackingFile();
 					final var backingImageId = ImageInformation.getBackingImageId(backingFileUrl);
-					if (!backingFileUrl.equals(backingImageId)) {
-						final var bfinfo = new ImageInformation(backingFileUrl, LOG);
-						LOG.info("Rebasing image: " + id + " --> " + backingImageId);
-						EmulatorUtils.changeBackingFile(file, backingImageId, bfinfo.getFileFormat(), LOG);
-					}
+					final var backingFileFormat = info.getBackingFileFormat();
+					assert backingFileUrl.equals(backingImageId);
+					assert backingFileFormat != null;
 				}
 			}
 			catch (Exception error) {
-				LOG.log(Level.WARNING, "Rebasing image '" + id + "' failed!", error);
+				LOG.log(Level.WARNING, "Backing file reference for image '" + id + "' is invalid!", error);
 				counter.increment(ImportCounts.FAILED);
 				return;
 			}
@@ -1793,9 +1928,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter, importer)
+					.consume(files, executor);
 		}
 	}
 
@@ -1841,9 +1978,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter,importer)
+					.consume(files, executor);
 		}
 
 		final var numImported = counter.get(ImportCounts.IMPORTED);
@@ -1855,13 +1994,9 @@ public class EnvironmentRepository extends EmilRest
 
 	private void importLegacyEmulatorArchiveV1(MigrationConfig mc) throws Exception
 	{
-		for (int i = 0; true; ++i) {
-			final var prefix = ConfigHelpers.toListKey("imagearchive.backends", i, ".");
-			final var config = ConfigHelpers.filter(ConfigurationProvider.getConfiguration(), prefix);
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
 			final var name = config.get("name");
-			if (name == null)
-				break;
-
 			if (!name.equals("emulators"))
 				continue;
 
@@ -1896,21 +2031,19 @@ public class EnvironmentRepository extends EmilRest
 
 		final Consumer<java.nio.file.Path> importer = (file) -> {
 			final var id = file.getFileName().toString();
-			// first, update backing file's URL in-place
+			// first, check backing file reference
 			try {
 				final var info = new ImageInformation(file.toString(), LOG);
 				if (info.hasBackingFile()) {
 					final var backingFileUrl = info.getBackingFile();
 					final var backingImageId = ImageInformation.getBackingImageId(backingFileUrl);
-					if (!backingFileUrl.equals(backingImageId)) {
-						final var bfinfo = new ImageInformation(backingFileUrl, LOG);
-						LOG.info("Rebasing emulator-image: " + id + " --> " + backingImageId);
-						EmulatorUtils.changeBackingFile(file, backingImageId, bfinfo.getFileFormat(), LOG);
-					}
+					final var backingFileFormat = info.getBackingFileFormat();
+					assert backingFileUrl.equals(backingImageId);
+					assert backingFileFormat != null;
 				}
 			}
 			catch (Exception error) {
-				LOG.log(Level.WARNING, "Rebasing emulator-image '" + id + "' failed!", error);
+				LOG.log(Level.WARNING, "Backing file reference for emulator-image '" + id + "' is invalid!", error);
 				counter.increment(ImportCounts.FAILED);
 				return;
 			}
@@ -1929,9 +2062,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter, importer)
+					.consume(files, executor);
 		}
 	}
 }

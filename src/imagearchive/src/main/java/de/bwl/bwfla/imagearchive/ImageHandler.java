@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import javax.activation.DataHandler;
 
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.resolver.DataResolvers;
 import de.bwl.bwfla.common.services.guacplay.io.Metadata;
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
@@ -35,7 +36,6 @@ import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
-import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.tasks.ImportImageTask;
 import org.apache.commons.io.FileUtils;
 
@@ -98,7 +98,7 @@ public class ImageHandler
 		this.handleClient = (config.isHandleConfigured()) ? new HandleClient() : null;
 
 		cleanTmpFiles();
-		resolveLocalBackingFiles();
+		//resolveLocalBackingFiles();
 	}
 
 	public void lock(String id)
@@ -189,6 +189,58 @@ public class ImageHandler
 //		return new ImageExport.ImageFileInfo(getArchivePrefix(), id, type);
 //	}
 
+	public Path findImagePathById(String imageid)
+	{
+		final var basepath = iaConfig.getImagePath()
+				.toPath()
+				.toAbsolutePath();
+
+		for (ImageType type : ImageType.values()) {
+			final var imgpath = basepath.resolve(type.name())
+					.resolve(imageid);
+
+			if (Files.exists(imgpath))
+				return imgpath;
+		}
+
+		return null;
+	}
+
+	public ImageInformation.QemuImageFormat findBackingFileFormat(String bfid, String bfurl) throws Exception
+	{
+		ImageInformation bfinfo;
+		try {
+			bfinfo = new ImageInformation(bfurl, log);
+		}
+		catch (Exception error) {
+			log.log(Level.WARNING, "Looking up backing file via URL failed!", error);
+			log.info("Searching backing file locally...");
+			final var bfpath = this.findImagePathById(bfid);
+			if (bfpath != null) {
+				log.info("Found backing file locally at: " + bfpath);
+				bfurl = bfpath.toString();
+			}
+			else {
+				log.info("Backing file was not found locally!");
+				log.info("Looking up backing file in new archive...");
+				if (iaConfig.getName().equalsIgnoreCase("emulators")) {
+					bfurl = DataResolvers.emulators()
+							.resolve(bfid);
+				}
+				else {
+					final var binding = new ImageArchiveBinding();
+					binding.setImageId(bfid);
+					bfurl = DataResolvers.images()
+							.resolve(binding, null);
+				}
+			}
+
+			bfinfo = new ImageInformation(bfurl, log);
+		}
+
+		return bfinfo.getFileFormat();
+	}
+
 	public String updateBackingFileUrl(Path image, ImageInformation info)
 	{
 		return this.updateBackingFileUrl(image.toFile(), info);
@@ -218,14 +270,17 @@ public class ImageHandler
 				log.info("Local backing file reference is up-to-date!");
 			}
 			else {
-				final var bfinfo = new ImageInformation(info.getBackingFile(), log);
+				var format = info.getBackingFileFormat();
+				if (format == null)
+					format = this.findBackingFileFormat(id, info.getBackingFile());
+
 				log.info("Rebasing image: " + image.getAbsolutePath() + " --> " + id);
-				EmulatorUtils.changeBackingFile(image.toPath(), id, bfinfo.getFileFormat(), log);
+				EmulatorUtils.changeBackingFile(image.toPath(), id, format, log);
 			}
 
 			return id;
 		}
-		catch (IOException|BWFLAException e) {
+		catch (Exception e) {
 			log.log(Level.SEVERE, "Updating backing file failed!", e);
 			return null;
 		}
@@ -1006,35 +1061,6 @@ public class ImageHandler
 		});
 
 		return taskids;
-	}
-
-	protected String createPatchedImage(String parentId, String type, ImageGeneralizationPatch patch)
-			throws  BWFLAException
-	{
-		if (parentId == null)
-			throw new BWFLAException("Invalid image's ID!");
-
-		String newBackingFile = getArchivePrefix() + parentId;
-		try {
-			log.info("Preparing image '" + parentId + "' for patching with patch '" + patch.getName() + "'...");
-			URL urlToQcow = patch.applyto(newBackingFile, log);
-
-			ImageArchiveMetadata md = new ImageArchiveMetadata(ImageType.valueOf(type));
-			TaskState state = importImageUrlAsync(urlToQcow, md, false);
-			state = ImageArchiveRegistry.getState(state.getTaskId());
-			while(!state.isDone()) {
-				Thread.sleep(500);
-				state = ImageArchiveRegistry.getState(state.getTaskId());
-			}
-			if(state.isFailed())
-				throw new BWFLAException("failed to patch");
-
-			log.info("finished patching. new image id " + state.getResult());
-			return state.getResult();
-		}
-		catch (BWFLAException | InterruptedException | IOException error) {
-			throw new BWFLAException(error);
-		}
 	}
 
 	public void createOrUpdateHandle(String imageId) throws BWFLAException

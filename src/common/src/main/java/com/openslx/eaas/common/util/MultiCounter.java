@@ -18,50 +18,19 @@
 
 package com.openslx.eaas.common.util;
 
-import java.util.Arrays;
 
-
-public class MultiCounter
+public abstract class MultiCounter
 {
-	private final int[] values;
-
-	public MultiCounter(int length)
-	{
-		this.values = new int[length];
-	}
-
-	public void reset()
-	{
-		Arrays.fill(values, 0);
-	}
+	public abstract void reset();
 
 
 	// ===== Positional Access ===============
 
-	public int get(int i)
-	{
-		return values[i];
-	}
-
-	public void set(int i, int value)
-	{
-		values[i] = value;
-	}
-
-	public void update(int i, int delta)
-	{
-		values[i] += delta;
-	}
-
-	public void increment(int i)
-	{
-		++values[i];
-	}
-
-	public void decrement(int i)
-	{
-		--values[i];
-	}
+	public abstract int get(int i);
+	public abstract void set(int i, int value);
+	public abstract void update(int i, int delta);
+	public abstract void increment(int i);
+	public abstract void decrement(int i);
 
 
 	// ===== Named Access ===============

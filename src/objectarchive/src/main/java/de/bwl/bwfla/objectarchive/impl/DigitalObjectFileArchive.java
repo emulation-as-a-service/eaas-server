@@ -27,11 +27,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Arrays;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -41,17 +44,21 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.openslx.eaas.common.util.MultiCounter;
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
+import com.openslx.eaas.common.util.AtomicMultiCounter;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
+import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
+import gov.loc.mets.MetsType;
 import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.ConfigurationInjection;
@@ -63,6 +70,8 @@ import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.utils.DefaultDriveMapper;
+
+import static de.bwl.bwfla.common.utils.METS.MetsUtil.MetsEaasConstant.FILE_GROUP_OBJECTS;
 
 
 // FIXME: this class should be implemented in a style of a "Builder" pattern
@@ -652,9 +661,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		FAILED,
 		__LAST;
 
-		public static MultiCounter counter()
+		public static AtomicMultiCounter counter()
 		{
-			return new MultiCounter(__LAST.ordinal());
+			return new AtomicMultiCounter(__LAST.ordinal());
 		}
 	}
 
@@ -679,9 +688,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Creating metadata for objects in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(creator);
+		ParallelProcessors.consumer(filter, creator)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numCreated = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
@@ -690,13 +698,32 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			throw new BWFLAException("Creating object-archive's metadata failed!");
 	}
 
+	private interface MetsFixer<T>
+	{
+		void apply(T value) throws Exception;
+	}
+
 	public void fixMetsFiles(MigrationConfig mc) throws Exception
 	{
+		final var digitalObjectsGroupName = FILE_GROUP_OBJECTS.toString();
+		final var objectIdsToRemove = new ArrayList<String>();
 		final var counter = UpdateCounts.counter();
+		final var guard = new Object();
+
 
 		final Predicate<String> filter = (objectId) -> {
 			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
 			return Files.exists(metsfile);
+		};
+
+		final BiFunction<MetsType.FileSec, String, MetsType.FileSec.FileGrp> fgfinder = (fsec, fgname) -> {
+			final var fgroups = (fsec != null) ? fsec.getFileGrp() : Collections.<MetsType.FileSec.FileGrp>emptyList();
+			for (final var fgroup : fgroups) {
+				if (fgname.equals(fgroup.getUSE()))
+					return fgroup;
+			}
+
+			return null;
 		};
 
 		final Consumer<String> fixer = (objectId) -> {
@@ -704,16 +731,38 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 				final var mets = this.loadMetsData(objectId)
 						.getMets();
 
-				final var fsec = mets.getFileSec();
-				if (fsec == null)
-					return;
+				var fsec = mets.getFileSec();
+				if (fsec == null) {
+					// add an empty file-section!
+					fsec = new MetsType.FileSec();
+					mets.setFileSec(fsec);
+				}
+
+				if (fgfinder.apply(fsec, digitalObjectsGroupName) == null) {
+					// add an empty file-group!
+					final var fgroup = new MetsType.FileSec.FileGrp();
+					fgroup.setUSE(digitalObjectsGroupName);
+					fsec.getFileGrp()
+							.add(fgroup);
+				}
 
 				final var updatemsgs = new ArrayList<String>();
-				for (final var fgroup : fsec.getFileGrp()) {
-					for (final var file : fgroup.getFile()) {
-						for (final var flocat : file.getFLocat()) {
+
+				final MetsFixer<MetsType.FileSec.FileGrp> digitalObjectsGroupFixer = (fgroup) -> {
+					final var files = fgroup.getFile();
+					for (final var fit = files.iterator(); fit.hasNext();) {
+						final var flocations = fit.next().getFLocat();
+						for (final var flit = flocations.iterator(); flit.hasNext();) {
+							final var flocat = flit.next();
 							final var oldurl = flocat.getHref();
 							var newurl = oldurl;
+
+							if (oldurl.endsWith("__import.iso")) {
+								// CASE: legacy "__import.iso" is referenced directly
+								updatemsgs.add("Removed legacy '__import.iso' reference!");
+								flit.remove();
+								continue;
+							}
 
 							if (oldurl.startsWith(objectId)) {
 								// CASE: <object-id>/<subpath> -> <subpath>
@@ -750,15 +799,59 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 								updatemsgs.add("FLocat-URL: " + oldurl + " -> " + flocat.getHref());
 							}
 						}
+
+						if (flocations.isEmpty())
+							fit.remove();
 					}
+
+					if (files.isEmpty()) {
+						// no files referenced in metadata, check storage content
+						final var fc = this.describe(objectId);
+						for (final var fce : fc.files)
+							fce.setId(null);
+
+						// NOTE: returned METS here should correctly describe referenced files!
+						final var newmets = this.fromFileCollection(objectId, fc);
+						final var newfgroup = fgfinder.apply(newmets.getFileSec(), digitalObjectsGroupName);
+						if (newfgroup == null) {
+							log.warning("No file-entries found for object '" + objectId + "'!");
+							objectIdsToRemove.add(objectId);
+							return;
+						}
+
+						files.addAll(newfgroup.getFile());
+						updatemsgs.add("Re-created file-section from storage!");
+					}
+				};
+
+				final var fgfixers = new HashMap<String, MetsFixer<MetsType.FileSec.FileGrp>>();
+				fgfixers.put(digitalObjectsGroupName, digitalObjectsGroupFixer);
+				for (final var fgroup : fsec.getFileGrp()) {
+					final var fgfixer = fgfixers.get(fgroup.getUSE());
+					if (fgfixer != null)
+						fgfixer.apply(fgroup);
+				}
+
+				if (objectId.contains(" ")) {
+					// some legacy objects may contain spaces in IDs!
+					final var newObjectId = objectId.replace(' ', '-');
+					mets.setID(newObjectId);
+
+					final var oldpath = Path.of(localPath, objectId);
+					final var newpath = Path.of(localPath, newObjectId);
+					Files.move(oldpath, newpath);
+
+					updatemsgs.add("Object-ID: '" + objectId + "' -> " + newObjectId);
 				}
 
 				if (updatemsgs.isEmpty())
 					return;
 
-				log.info("Updates for object '" + objectId + "':");
-				for (final var msg : updatemsgs)
-					log.info("  " + msg);
+				synchronized (guard) {
+					log.info("Updates for object '" + objectId + "':");
+					for (final var msg : updatemsgs)
+						log.info("  " + msg);
+				}
 
 				this.writeMetsFile(mets);
 				counter.increment(UpdateCounts.UPDATED);
@@ -770,9 +863,26 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Fixing metadata for objects in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(fixer);
+		ParallelProcessors.consumer(filter, fixer)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
+
+		if (!objectIdsToRemove.isEmpty()) {
+			log.info("Removing empty objects in archive '" + this.getName() + "'...");
+			final var deleter = new DeprecatedProcessRunner()
+					.setLogger(log);
+
+			objectIdsToRemove.forEach((objectId) -> {
+				final var path = Path.of(localPath, objectId);
+				final var removed = deleter.setCommand("rm")
+						.addArguments("-r", "\"" + path + "\"")
+						.execute();
+
+				if (removed)
+					log.info("Removed: " + path);
+			});
+
+			log.info("Removed " + objectIdsToRemove.size() + " empty object(s)");
+		}
 
 		final var numFixed = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
@@ -806,9 +916,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Packing object files in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(packer);
+		ParallelProcessors.consumer(filter, packer)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numPacked = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
@@ -840,8 +949,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Cleaning up object-archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.forEach(cleaner);
+		ParallelProcessors.consumer(cleaner)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numRemoved = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);

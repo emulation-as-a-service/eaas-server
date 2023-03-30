@@ -561,9 +561,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		// Destroy base class!
 		super.destroy();
-
-		// Collect garbage
-		System.gc();
 	}
 
 
@@ -1280,7 +1277,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	void stopProcessRunner(DeprecatedProcessRunner runner)
 	{
 		final int emuProcessId = runner.getProcessId();
-		LOG.info("Stopping emulator " + emuProcessId + "...");
+		final var emuContainerId = this.getContainerId();
+		if (this.isContainerModeEnabled())
+			LOG.info("Stopping emulator " + emuProcessId + " in container " + emuContainerId + "...");
+		else LOG.info("Stopping emulator " + emuProcessId + "...");
+
 		try {
 			if (this.isSdlBackendEnabled()) {
 				// Send termination message
@@ -1288,35 +1289,32 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				ctlMsgWriter.send(emuCtlSocketName);
 
 				// Give emulator a chance to shutdown cleanly
-				for (int i = 0; i < 10; ++i) {
-					if (runner.isProcessFinished()) {
-						LOG.info("Emulator " + emuProcessId + " stopped.");
-						return;
-					}
-
-					Thread.sleep(500);
-				}
-			}
-			else if ((this.isXpraBackendEnabled() || this.isHeadlessModeEnabled()) && this.isContainerModeEnabled()) {
-				final var killer = new DeprecatedProcessRunner();
-				final var cmds = new ArrayList<List<String>>(2);
-				cmds.add(List.of("runc", "kill", this.getContainerId(), "TERM"));
-				cmds.add(List.of("runc", "kill", "-a", this.getContainerId(), "KILL"));
-				for (final var args : cmds) {
-					killer.setCommand("sudo");
-					killer.addArguments(args);
-					killer.setLogger(LOG);
-					killer.execute();
-
-					if (runner.waitUntilFinished(5, TimeUnit.SECONDS)) {
-						LOG.info("Emulator " + emuProcessId + " stopped.");
-						return;
-					}
+				if (runner.waitUntilFinished(5, TimeUnit.SECONDS)) {
+					LOG.info("Emulator " + emuProcessId + " stopped.");
+					return;
 				}
 			}
 		}
 		catch (Exception exception) {
 			LOG.log(Level.SEVERE, "Stopping emulator failed!", exception);
+		}
+
+		if (this.isContainerModeEnabled()) {
+			final var killer = new DeprecatedProcessRunner();
+			final var cmds = new ArrayList<List<String>>(2);
+			cmds.add(List.of("runc", "kill", emuContainerId, "TERM"));
+			cmds.add(List.of("runc", "kill", "-a", emuContainerId, "KILL"));
+			for (final var args : cmds) {
+				killer.setCommand("sudo");
+				killer.addArguments(args);
+				killer.setLogger(LOG);
+				killer.execute();
+
+				if (runner.waitUntilFinished(5, TimeUnit.SECONDS)) {
+					LOG.info("Emulator " + emuProcessId + " stopped.");
+					return;
+				}
+			}
 		}
 
 		LOG.warning("Emulator " + emuProcessId + " failed to shutdown cleanly! Killing it...");
