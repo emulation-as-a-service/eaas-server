@@ -3,6 +3,7 @@ package com.openslx.eaas.automation.impl.sikuli;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -12,7 +13,9 @@ import java.util.regex.Pattern;
 public class SikuliUtils
 {
 
-	private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile(".*/[\\w\\d-]+\\.sikuli/[\\w\\d-]+\\.py");
+	private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile(".*[\\w\\d-]+\\.py");
+	// Pattern.compile(".*/[\\w\\d-]+\\.+sikuli/[\\w\\d-]+\\.py");
+	// TODO just use endswith (possible because dir is called sikuli always and not xyz.sikuli anymore)?
 
 
 	public static Path getSikuliFilenameForDirectory(Path directory) throws Exception
@@ -31,19 +34,52 @@ public class SikuliUtils
 	//TODO a generalized version of this should probably be in commons
 	public static void extractTarToUploadDirectory(Path workDir, String blobStoreUrl) throws BWFLAException
 	{
+		workDir = workDir.resolve("data/uploads/sikuli");
+		try {
+			if (!Files.exists(workDir)) {
+				Files.createDirectory(workDir);
+			}
+			else {
+				// FileUtils.cleanDirectory(workDir.toFile()); --- no permissions
+				Runtime runtime = Runtime.getRuntime();
+				var process = runtime.exec("sudo rm -rf " + workDir); //Process Runner does not support *
+				process.waitFor();
+				Files.createDirectory(workDir);
+				//alternatively: could delete with Process Runner and then create folder again
+			}
+
+		}
+		catch (IOException e) {
+			System.out.println("----------- Could not create/clear Sikuli Directory ----------------");
+			System.out.println(e);
+		}
+		catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+
+
+		System.out.println("workdir after: " + workDir);
+
 		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");
-		pr.addArguments("-L", "-o", workDir.toString() + "/out.tgz");
+		pr.setWorkingDirectory(workDir);
+		pr.addArguments("-L", "-o", "out.tgz");
 		pr.addArgument(blobStoreUrl);
 		if (!pr.execute(true))
 			throw new BWFLAException("failed to download " + blobStoreUrl);
 
 		pr = new DeprecatedProcessRunner("sudo");
-		pr.setWorkingDirectory(workDir.resolve("data/uploads"));
-		pr.addArguments("tar", "xvf", workDir.toString() + "/out.tgz");
+		pr.setWorkingDirectory(workDir);
+		pr.addArguments("tar", "xvf", "out.tgz");
 		if (!pr.execute(true))
 			throw new BWFLAException("failed to extract tar");
-	}
 
+		pr = new DeprecatedProcessRunner("sudo");
+		pr.setWorkingDirectory(workDir);
+		pr.addArguments("rm", "./out.tgz");
+		if (!pr.execute(true))
+			throw new BWFLAException("failed to delete tar");
+
+	}
 
 
 	public void stopComponentAfterExecution()

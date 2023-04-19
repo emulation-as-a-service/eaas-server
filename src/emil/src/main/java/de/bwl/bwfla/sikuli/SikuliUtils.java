@@ -26,10 +26,15 @@ public class SikuliUtils
 	public static String tarSikuliDirectoryAndUploadToBlobstore(Path sikuliDirectory) throws Exception
 	{
 
+		System.out.println("Executing in: " + sikuliDirectory);
 		Path tempDir = Files.createTempDirectory("sikuli");
 		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
 		tarRunner.setWorkingDirectory(sikuliDirectory);
-		tarRunner.addArguments("-zcvf", tempDir.resolve("sikulix.tar.gz").toString(), sikuliDirectory.toString());
+		tarRunner.addArguments("-cvz",
+				"--xform",
+				"s:'./'::",
+				"-f",
+				tempDir.resolve("sikulix.tar.gz").toString(), "."); //* won't work, current solution leaves us with ./
 		tarRunner.execute(true);
 
 		final Configuration config = ConfigurationProvider.getConfiguration();

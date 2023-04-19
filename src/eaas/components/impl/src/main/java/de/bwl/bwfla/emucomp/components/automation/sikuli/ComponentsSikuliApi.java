@@ -81,7 +81,7 @@ public class ComponentsSikuliApi
 	@Secured(roles = {Role.PUBLIC})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public ProcessResultUrl postDownload(@PathParam("componentId") String componentId) throws BWFLAException
+	public Response postDownload(@PathParam("componentId") String componentId) throws BWFLAException
 	{
 		LOG.info("Got request to download sikuli files for component " + componentId);
 		return SikuliEmucompTasks.downloadCurrentSikuliScriptFromEmulatorContainer(componentId);

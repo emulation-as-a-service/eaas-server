@@ -77,7 +77,7 @@ public class SikuliEmucompTasks
 		RuncStateInformation info = RuncStateInformation.getRuncStateInformationForComponent(request.getComponentId());
 
 		Path tmpPath = Path.of(info.getBundle());
-		Path scriptPathAppserver = SikuliUtils.getSikuliFilenameForDirectory(tmpPath.resolve("data/uploads"));
+		Path scriptPathAppserver = SikuliUtils.getSikuliFilenameForDirectory(tmpPath.resolve("data/uploads/sikuli/"));
 
 		Path parentDir = scriptPathAppserver.getParent();
 		Path parentName = parentDir.getName(parentDir.getNameCount() - 1);
@@ -156,7 +156,7 @@ public class SikuliEmucompTasks
 
 	}
 
-	public static ProcessResultUrl downloadCurrentSikuliScriptFromEmulatorContainer(String componentId) throws BWFLAException
+	public static Response downloadCurrentSikuliScriptFromEmulatorContainer(String componentId) throws BWFLAException
 	{
 		LOG.info("Compressing Sikuli Script and uploading to Blobstore...");
 		Path tmpPath = Path.of(RuncStateInformation.getRuncStateInformationForComponent(componentId).getBundle());
@@ -164,7 +164,7 @@ public class SikuliEmucompTasks
 		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
 		tarRunner.setLogger(LOG);
 		tarRunner.setWorkingDirectory(tmpPath.resolve("data/uploads"));
-		tarRunner.addArguments("-zcvf", tmpPath.resolve("sikulix.tar.gz").toString(), "output.sikuli");
+		tarRunner.addArguments("-zcvf", tmpPath.resolve("sikulix.tar.gz").toString(), "sikuli");
 		tarRunner.execute(true);
 
 		final Configuration config = ConfigurationProvider.getConfiguration();
@@ -184,9 +184,10 @@ public class SikuliEmucompTasks
 		ProcessResultUrl returnResult = new ProcessResultUrl();
 		returnResult.setUrl(handle.toRestUrl(blobStoreAddress));
 
-		LOG.info("Blob Store Address for Sikuli Script: " + handle.toRestUrl(blobStoreAddress));
+		LOG.info("Blob Store Address for Sikuli Script:\n" + handle.toRestUrl(blobStoreAddress));
 
-		return returnResult;
+		return Response.ok(returnResult).build();
+
 	}
 
 	public static SikuliLogResponse getLogFiles(String componentId) throws IOException

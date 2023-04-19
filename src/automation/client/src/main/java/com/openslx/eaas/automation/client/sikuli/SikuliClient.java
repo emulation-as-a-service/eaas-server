@@ -31,11 +31,12 @@ public class SikuliClient
 		return sikuliPostRequest(request, "/execute");
 	}
 
-	public Response downloadSikuliScript(SikuliDownloadRequest request)
+	public ProcessResultUrl downloadSikuliScript(SikuliDownloadRequest request)
 	{
 		LOG.info("Sending download request to sikuli component backend on emucomp.");
 
-		return sikuliPostRequest(request, "/downloads");
+		var resp = sikuliPostRequest(request, "/downloads");
+		return resp.readEntity(ProcessResultUrl.class);
 	}
 
 	public Response uploadSikuliScript(SikuliUploadRequest request)
