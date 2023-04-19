@@ -43,6 +43,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
@@ -63,6 +64,8 @@ public class AutomationAPI
 	private final TaskManager taskmgr;
 
 	private ArrayList<String> automations;
+
+	private ArrayList<AllAutomationsResponse.AutomationResult> automationStatus;
 
 	private final java.nio.file.Path automationBasePath = java.nio.file.Path.of("/tmp-storage/automation");
 
@@ -95,6 +98,32 @@ public class AutomationAPI
 	public Response getAllAutomations(@Context UriInfo uri) throws IOException, ExecutionException, InterruptedException
 	{
 
+		automationStatus = getAllAutomationResults();
+
+		AllAutomationsResponse response = new AllAutomationsResponse();
+		response.setResults(automationStatus);
+
+		return Response.ok(response).build();
+	}
+
+	@GET
+	@Path("/automations/{automationId}/status")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getAutomationStatusForId(@Context UriInfo uri, @PathParam("automationId") String automationId) throws IOException, ExecutionException, InterruptedException
+	{
+		var automation = automationStatus.stream().filter(x -> Objects.equals(x.getId(), automationId)).findFirst();
+	    if (automation.isPresent()){
+			return Response.ok(automation.get()).build();
+		}
+
+		return Response.status(Response.Status.NOT_FOUND).build();
+
+	}
+
+
+	private ArrayList<AllAutomationsResponse.AutomationResult> getAllAutomationResults() throws InterruptedException, ExecutionException, IOException
+	{
 		ArrayList<AllAutomationsResponse.AutomationResult> resultList = new ArrayList<>();
 		for (String taskId : automations) {
 
@@ -211,11 +240,7 @@ public class AutomationAPI
 			}
 			resultList.add(result);
 		}
-
-		AllAutomationsResponse response = new AllAutomationsResponse();
-		response.setResults(resultList);
-
-		return Response.ok(response).build();
+		return resultList;
 	}
 
 
@@ -367,6 +392,7 @@ public class AutomationAPI
 	private void resetAutomations() throws IOException, BWFLAException
 	{
 		automations = new ArrayList<>();
+		automationStatus = new ArrayList<>();
 
 		if (Files.notExists(automationBasePath)) {
 			Files.createDirectory(automationBasePath);
