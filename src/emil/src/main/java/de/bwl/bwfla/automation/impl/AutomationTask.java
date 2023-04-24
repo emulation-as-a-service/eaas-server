@@ -41,6 +41,7 @@ public class AutomationTask extends BlockingTask<Object>
 		Files.createDirectory(pathOf.resolve("files"));
 
 		boolean isSikuliTask = false;
+		request.setTimeout(request.getTimeout()+2); //TODO add small buffer to timeout to compensate for 90 sec startup
 
 		if (request.getClass().equals(AutomationSikuliRequest.class)) {
 			log.info("Got AutomationSikuliRequest...");
@@ -147,7 +148,9 @@ public class AutomationTask extends BlockingTask<Object>
 			}
 		}
 		else {
-			log.warning("Python automation script did not return code 0!");
+			log.warning("Python automation script did not return code 0! Logs:");
+			Path logFile = Path.of("/tmp-storage/automation/" + getTaskId() + "/automation.log");
+			log.info(Files.readString(logFile));
 			throw new BWFLAException("Error while executing automation task " + getTaskId());
 		}
 	}

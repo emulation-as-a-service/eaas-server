@@ -110,15 +110,100 @@ public class AutomationAPI
 	@Path("/automations/{automationId}/status")
 	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getAutomationStatusForId(@Context UriInfo uri, @PathParam("automationId") String automationId) throws IOException, ExecutionException, InterruptedException
+	public Response getAutomationStatusForId(@Context UriInfo uri, @PathParam("automationId") String automationId)
 	{
 		var automation = automationStatus.stream().filter(x -> Objects.equals(x.getId(), automationId)).findFirst();
-	    if (automation.isPresent()){
+		if (automation.isPresent()) {
 			return Response.ok(automation.get()).build();
 		}
 
 		return Response.status(Response.Status.NOT_FOUND).build();
 
+	}
+
+
+	@POST
+	@Path("/config")
+	@Secured(roles = {Role.PUBLIC})
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response postConfiguration(AutomationConfigurationRequest request, @Context UriInfo uri)
+	{
+		ObjectMapper mapper = new ObjectMapper();
+		String configName = "/tmp-storage/automation/automation_config.json";
+		//TODO this should probably just be a default.yml file and not configurable via API
+		//TODO paths are currently mostly hardcoded and not retrieved from config
+
+		try {
+			mapper.writeValue(new File(configName), request);
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+		return Response.ok().build();
+	}
+
+
+	@POST
+	@Path("/execute")
+	@Secured(roles = {Role.PUBLIC})
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response postExecute(AutomationBaseRequest request, @Context UriInfo uri)
+	{
+		return startAutomationTask(request, uri);
+	}
+
+	@GET
+	@Path("/waitqueue/{id}")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response poll(@PathParam("id") String id)
+	{
+		try {
+			final TaskInfo<Object> info = taskmgr.lookup(id);
+			if (info == null) {
+				String message = "Passed ID is invalid: " + id;
+				return ResponseUtils.createMessageResponse(Response.Status.NOT_FOUND, message);
+			}
+
+			Response.Status status = Response.Status.OK;
+			final WaitQueueUserData userdata = info.userdata(WaitQueueUserData.class);
+
+			WaitQueueResponse response = new WaitQueueResponse();
+			response.setId(id);
+			response.setResultUrl(userdata.getResultLocation());
+
+			if (info.result().isCompletedExceptionally()) {
+				response.setHasError(true);
+				response.setStatus("Error");
+				response.setDone(true);
+			}
+			else if (info.result().isDone()) {
+				// Result is available!
+				response.setStatus("Done");
+				response.setDone(true);
+			}
+			else {
+				// Result is not yet available!
+				response.setStatus("Processing");
+				response.setDone(false);
+			}
+			return ResponseUtils.createResponse(status, response);
+		}
+		catch (Throwable throwable) {
+			return ResponseUtils.createInternalErrorResponse(throwable);
+		}
+	}
+
+	@GET
+	@Path("/executions/{id}")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getDownloadResult(@PathParam("id") String id)
+	{
+		return getResponse(id);
 	}
 
 
@@ -243,89 +328,6 @@ public class AutomationAPI
 		return resultList;
 	}
 
-
-	@POST
-	@Path("/config")
-	@Secured(roles = {Role.PUBLIC})
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response postConfiguration(AutomationConfigurationRequest request, @Context UriInfo uri)
-	{
-		ObjectMapper mapper = new ObjectMapper();
-		String configName = "/tmp-storage/automation/automation_config.json";
-		//TODO make path configurable and properly use path everywhere
-
-		try {
-			mapper.writeValue(new File(configName), request);
-		}
-		catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-
-		return Response.ok().build();
-	}
-
-
-	@POST
-	@Path("/execute")
-	@Secured(roles = {Role.PUBLIC})
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response postExecute(AutomationBaseRequest request, @Context UriInfo uri)
-	{
-		return startAutomationTask(request, uri);
-	}
-
-	@GET
-	@Path("/waitqueue/{id}")
-	@Secured(roles = {Role.PUBLIC})
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response poll(@PathParam("id") String id)
-	{
-		try {
-			final TaskInfo<Object> info = taskmgr.lookup(id);
-			if (info == null) {
-				String message = "Passed ID is invalid: " + id;
-				return ResponseUtils.createMessageResponse(Response.Status.NOT_FOUND, message);
-			}
-
-			Response.Status status = Response.Status.OK;
-			final WaitQueueUserData userdata = info.userdata(WaitQueueUserData.class);
-
-			WaitQueueResponse response = new WaitQueueResponse();
-			response.setId(id);
-			response.setResultUrl(userdata.getResultLocation());
-
-			if (info.result().isCompletedExceptionally()) {
-				response.setHasError(true);
-				response.setStatus("Error");
-				response.setDone(true);
-			}
-			else if (info.result().isDone()) {
-				// Result is available!
-				response.setStatus("Done");
-				response.setDone(true);
-			}
-			else {
-				// Result is not yet available!
-				response.setStatus("Processing");
-				response.setDone(false);
-			}
-			return ResponseUtils.createResponse(status, response);
-		}
-		catch (Throwable throwable) {
-			return ResponseUtils.createInternalErrorResponse(throwable);
-		}
-	}
-
-	@GET
-	@Path("/executions/{id}")
-	@Secured(roles = {Role.PUBLIC})
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getDownloadResult(@PathParam("id") String id)
-	{
-		return getResponse(id);
-	}
 
 	private Response createWaitQueue(UriInfo uri, String taskID, String upload)
 	{
