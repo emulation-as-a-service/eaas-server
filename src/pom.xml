@@ -271,7 +271,6 @@
 		<module>blobstore-client-v2</module>
 		<module>automation</module>
 		<module>dig-pub-sharing</module>
-		<module>environment-proposer</module>
 		<module>image-archive</module>
 		<module>imagearchive</module>
 		<module>imagearchive/imagearchive-client</module>
@@ -513,12 +512,12 @@
 			<dependency>
 				<groupId>com.auth0</groupId>
 				<artifactId>java-jwt</artifactId>
-				<version>3.3.0</version>
+				<version>4.4.0</version>
 			</dependency>
 			<dependency>
 				<groupId>com.auth0</groupId>
 				<artifactId>jwks-rsa</artifactId>
-				<version>0.11.0</version>
+				<version>0.22.0</version>
 			</dependency>
 			<dependency>
 				<groupId>io.pebbletemplates</groupId>
@@ -778,12 +777,6 @@
 				<artifactId>metadata-repository-server</artifactId>
 				<version>${project.version}</version>
 				<type>jar</type>
-			</dependency>
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>environment-proposer</artifactId>
-				<version>${project.version}</version>
-				<type>war</type>
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
