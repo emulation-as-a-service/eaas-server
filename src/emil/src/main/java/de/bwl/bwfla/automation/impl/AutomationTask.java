@@ -10,6 +10,7 @@ import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
@@ -24,12 +25,14 @@ import java.nio.file.Path;
 public class AutomationTask extends BlockingTask<Object>
 {
 	private final String token;
+	private final String userId;
 	private AutomationBaseRequest request;
 
-	public AutomationTask(AutomationBaseRequest request, String token)
+	public AutomationTask(AutomationBaseRequest request, UserContext ctx)
 	{
 		this.request = request;
-		this.token = token;
+		this.token = ctx.getToken();
+		this.userId = ctx.getUserId();
 	}
 
 	@Override
@@ -98,9 +101,10 @@ public class AutomationTask extends BlockingTask<Object>
 			automationScriptRunner.addArgument("--sikuli");
 		}
 
-		if (token != null) {
+		if (token != null && userId != null) { //TODO check that both exist?
 			log.info("Adding token to python script arguments!");
 			automationScriptRunner.addArguments("-a", token);
+			automationScriptRunner.addArguments("-u", userId);
 		}
 
 		if (automationScriptRunner.execute(true)) {

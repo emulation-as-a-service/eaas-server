@@ -91,6 +91,7 @@ public class AutomationAPI
 	}
 
 	//TODO set done to true when error occurs
+	//TODO add field timeoutReached
 	@GET
 	@Path("/automations")
 	@Secured(roles = {Role.PUBLIC})
@@ -380,7 +381,7 @@ public class AutomationAPI
 	{
 		final String taskID;
 		try {
-			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser.getToken()));
+			taskID = taskmgr.submit(new AutomationTask(request, authenticatedUser));
 			automations.add(taskID);
 		}
 		catch (Throwable throwable) {
