@@ -34,36 +34,7 @@ public class UploadSikuliScriptTask extends BlockingTask<Object>
 		log.info("Starting Sikuli Upload Task on Gateway");
 
 		client.uploadSikuliScript(request);
-
-		if (request.isComputeUiFields()) {
-			Path tmpPath = Files.createTempDirectory("sikuli");
-
-			String blobStoreUrl = request.getBlobStoreUrl();
-			SikuliUtils.extractTarFromBlobstore(tmpPath, blobStoreUrl);
-
-			Optional<Path> optionalPath;
-			Path sikuliPath;
-			try (Stream<Path> files = Files.walk(tmpPath)) {
-				optionalPath = files.filter(f -> f.getFileName().toString().contains(".py")).findFirst();
-			}
-			if (optionalPath.isPresent()) {
-				sikuliPath = optionalPath.get();
-			}
-			else {
-				throw new RuntimeException("Could not find an .py sikuli script after extracting the provided tgz.");
-			}
-
-			DeprecatedProcessRunner reverseScriptRunner = new DeprecatedProcessRunner("sudo");
-			reverseScriptRunner.setWorkingDirectory(tmpPath);
-			reverseScriptRunner.addArguments("python3", "/libexec/sikuli-script-creator/reverse.py", sikuliPath.toString());
-			reverseScriptRunner.execute(true);
-
-			ObjectMapper objectMapper = new ObjectMapper();
-			return objectMapper.readValue(tmpPath.resolve("reverse_script.json").toFile(), SikuliUploadResponse.class);
-		}
-		else
-			return null;
-
+		return null;
 	}
 
 
