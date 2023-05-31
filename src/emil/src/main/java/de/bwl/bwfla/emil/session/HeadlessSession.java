@@ -194,6 +194,7 @@ public class HeadlessSession extends Session
 
 		if (componentsToComplete.isEmpty() && componentsToSave.isEmpty()) {
 			isFinished = true;
+			//FIXME keepalives need  to be stopped here (?!)
 		}
 	}
 

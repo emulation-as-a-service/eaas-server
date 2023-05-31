@@ -1,6 +1,5 @@
 package de.bwl.bwfla.sikuli;
 
-import com.openslx.eaas.automation.api.sikuli.SikuliCreateScriptRequest;
 import com.openslx.eaas.automation.api.sikuli.SikuliDownloadRequest;
 import com.openslx.eaas.automation.api.sikuli.SikuliExecutionRequest;
 import com.openslx.eaas.automation.api.sikuli.SikuliUploadRequest;
@@ -18,7 +17,6 @@ import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentStateResponse;
 import de.bwl.bwfla.emucomp.api.ComponentState;
 import de.bwl.bwfla.restutils.ResponseUtils;
-import de.bwl.bwfla.sikuli.task.CreateSikuliScriptTask;
 import de.bwl.bwfla.sikuli.task.DownloadSikuliScriptTask;
 import de.bwl.bwfla.sikuli.task.ExecuteSikuliTask;
 import de.bwl.bwfla.sikuli.task.UploadSikuliScriptTask;
@@ -60,28 +58,6 @@ public class SikuliApi
 		catch (Exception error) {
 			throw new BWFLAException("Initializing Sikuli API failed!", error);
 		}
-	}
-
-	//TODO rename to something like create?
-	@POST
-	@Path("/scripts")
-	@Secured(roles = {Role.PUBLIC})
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response postBuild(SikuliCreateScriptRequest request, @Context UriInfo uri)
-	{
-
-		final String taskID;
-		try {
-			taskID = taskmgr.submit(new CreateSikuliScriptTask(request));
-		}
-		catch (Throwable throwable) {
-			LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
-			return ResponseUtils.createInternalErrorResponse(throwable);
-		}
-
-		return createWaitQueue(uri, taskID, "scripts");
-
 	}
 
 	@POST
