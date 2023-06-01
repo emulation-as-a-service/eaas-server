@@ -1,5 +1,7 @@
 package de.bwl.bwfla.emil.session;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.Components;
@@ -59,6 +61,19 @@ public class HeadlessSession extends Session
 
 		headlessComponents = componentSpecList;
 		headlessComponents.forEach(c -> components().add(new SessionComponent(c.getComponentId())));
+
+		try {
+
+			System.out.println("Incoming List: " + DataUtils.json().writer(true).writeValueAsString(componentSpecList));
+
+			System.out.println("Components in this session:");
+			System.out.println("Components to complete: " + DataUtils.json().writer(true).writeValueAsString(this.componentsToComplete));
+			System.out.println("Components to save: " +DataUtils.json().writer(true).writeValueAsString(this.componentsToSave));
+
+		}
+		catch (JsonProcessingException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public List<ComputeResponse.ComputeResult> getResult(Components endpoint, Logger log)
