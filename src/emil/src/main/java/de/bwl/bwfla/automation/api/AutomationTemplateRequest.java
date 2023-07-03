@@ -31,6 +31,15 @@ public class AutomationTemplateRequest extends AutomationBaseRequest
 	@JsonProperty("installAutostart")
 	protected boolean installAutostart;
 
+	@JsonProperty("deleteAutostart")
+	protected boolean deleteAutostart;
+
+	@JsonProperty("initialDelay")
+	protected int initialDelay;
+
+	@JsonProperty("sleepLength")
+	protected int sleepLength;
+
 	//migration only
 	@JsonProperty("outputFileFormat")
 	protected String outputFileFormat;
@@ -106,6 +115,16 @@ public class AutomationTemplateRequest extends AutomationBaseRequest
 		this.installAutostart = installAutostart;
 	}
 
+	public boolean isDeleteAutostart()
+	{
+		return deleteAutostart;
+	}
+
+	public void setDeleteAutostart(boolean deleteAutostart)
+	{
+		this.deleteAutostart = deleteAutostart;
+	}
+
 	public String getOutputFileFormat()
 	{
 		return outputFileFormat;
@@ -134,5 +153,25 @@ public class AutomationTemplateRequest extends AutomationBaseRequest
 	public void setAllFiles(ArrayList<ComponentWithExternalFilesRequest.FileURL> allFiles)
 	{
 		this.allFiles = allFiles;
+	}
+
+	public int getInitialDelay()
+	{
+		return initialDelay;
+	}
+
+	public void setInitialDelay(int initialDelay)
+	{
+		this.initialDelay = initialDelay;
+	}
+
+	public int getSleepLength()
+	{
+		return sleepLength;
+	}
+
+	public void setSleepLength(int sleepLength)
+	{
+		this.sleepLength = sleepLength;
 	}
 }

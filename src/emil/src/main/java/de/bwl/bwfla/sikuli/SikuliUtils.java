@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 
 public class SikuliUtils
@@ -96,10 +97,12 @@ public class SikuliUtils
 		}
 	}
 
-	public static ProcessResultUrl getDebugInfoForTaskId(String taskId)
+	public static ProcessResultUrl getDebugInfoForTaskId(String taskId, Logger log)
 	{
+		log.info("Getting Debug Information for task id: " + taskId);
 		var basePath = Path.of("/tmp-storage/automation/sikuli").resolve(taskId);
 		if (Files.notExists(basePath)) {
+			log.info("Directory does not exist...");
 			throw new NotFoundException("Could not find directory for taskId " + taskId);
 		}
 		var response = new ProcessResultUrl();

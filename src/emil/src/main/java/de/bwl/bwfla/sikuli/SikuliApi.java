@@ -53,6 +53,7 @@ public class SikuliApi
 	public SikuliApi() throws BWFLAException
 	{
 		try {
+			LOG.info("Initializing Sikuli API...");
 			this.taskmgr = new TaskManager();
 		}
 		catch (Exception error) {
@@ -127,7 +128,6 @@ public class SikuliApi
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response getLogsForTaskId(@PathParam("taskId") String taskId) throws Exception
 	{
-
 		return getSikuliLogsForTaskId(taskId);
 	}
 
@@ -137,8 +137,27 @@ public class SikuliApi
 	@Produces(MediaType.APPLICATION_JSON)
 	public ProcessResultUrl getDebugInfoForTaskId(@PathParam("taskId") String taskId)
 	{
+		return SikuliUtils.getDebugInfoForTaskId(taskId, LOG);
+	}
 
-		return SikuliUtils.getDebugInfoForTaskId(taskId);
+	@GET
+	@Path("/screenshot/tasks/{taskId}")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getScreenshotForComponentId(@PathParam("taskId") String taskId)
+	{
+		var basePath = java.nio.file.Path.of("/tmp-storage/automation/sikuli").resolve(taskId);
+		if (Files.notExists(basePath.resolve("component.txt"))) {
+			throw new NotFoundException("No component was found for sikuli task with id " + taskId);
+		}
+		try {
+			var componentId = Files.readString(basePath.resolve("component.txt"));
+			return getSikuliClient(componentId).getLatestScreenshot();
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
 	}
 
 	@GET

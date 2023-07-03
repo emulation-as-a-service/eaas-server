@@ -60,8 +60,10 @@ public class Compute {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/{sessionId}")
     public Response state(@PathParam("sessionId") String sessionId) {
+        LOG.info("Getting state for session " + sessionId);
         Session session = sessions.get(sessionId);
         if (session == null) {
+            LOG.info("Session " + sessionId + " not found!");
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
@@ -72,6 +74,25 @@ public class Compute {
         response.setResult(headlessSession.getResult(endpoint, LOG));
 
         return Response.status(Response.Status.OK).entity(response).build();
+    }
+
+    @POST
+    @Secured(roles = {Role.PUBLIC})
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/{sessionId}/stop")
+    public Response stopSession(@PathParam("sessionId") String sessionId){
+        LOG.info("Got request to stop session:" + sessionId);
+        Session session = sessions.get(sessionId);
+        if (session == null) {
+            LOG.info("Session " + sessionId + " not found - can't stop.");
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        HeadlessSession headlessSession = (HeadlessSession) session;
+        LOG.info(" --- Manually stopping session " + sessionId);
+        headlessSession.onTimeout(endpoint, LOG);
+        return Response.status(Response.Status.OK).entity("Manually called timeout, session should stop momentarily.").build();
+
     }
 
     private UserContext getUserContext() {

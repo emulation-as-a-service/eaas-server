@@ -108,6 +108,7 @@ public class ImportObjectTask extends BlockingTask<Object>
 
         final Map<String, String> userdata = new TreeMap<>();
         userdata.put("objectId", m.getID());
+        userdata.put("archive", archiveId);
         return userdata;
     }
 }

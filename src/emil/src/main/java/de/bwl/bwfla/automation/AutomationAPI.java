@@ -122,6 +122,46 @@ public class AutomationAPI
 
 	}
 
+	@GET
+	@Path("/automations/{automationId}/debug")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
+	public ProcessResultUrl getDebugInformationForId(@Context UriInfo uri, @PathParam("automationId") String automationId) throws BWFLAException
+	{
+
+		var path = automationBasePath.resolve(automationId);
+
+		if (Files.notExists(path)) {
+			throw new NotFoundException("Couldnt find task");
+		}
+
+		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
+		tarRunner.setLogger(LOG);
+		tarRunner.setWorkingDirectory(automationBasePath);
+		java.nio.file.Path fileName = automationBasePath.resolve("automation_debug_" + automationId + ".tar.gz");
+		tarRunner.addArguments("-zcvf", fileName.toString(), automationId);
+		tarRunner.execute(true);
+
+		final Configuration config = ConfigurationProvider.getConfiguration();
+		final BlobStore blobstore = BlobStoreClient.get()
+				.getBlobStorePort(config.get("ws.blobstore"));
+		final String blobStoreAddress = config.get("rest.blobstore");
+
+		final BlobDescription blob = new BlobDescription()
+				.setDescription("Debug")
+				.setNamespace("automation")
+				.setDataFromFile(fileName)
+				.setType(".tgz")
+				.setName("automation_task_" + automationId + "_debug");
+
+		BlobHandle handle = blobstore.put(blob);
+
+		ProcessResultUrl returnResult = new ProcessResultUrl();
+		returnResult.setUrl(handle.toRestUrl(blobStoreAddress));
+
+		return returnResult;
+	}
+
 
 	@POST
 	@Path("/config")
@@ -421,9 +461,13 @@ public class AutomationAPI
 
 	private static class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object>
 	{
+
 		public TaskManager() throws NamingException
 		{
 			super("AUTOMATION-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 		}
+
 	}
+
+
 }

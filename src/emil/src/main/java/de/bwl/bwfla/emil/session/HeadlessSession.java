@@ -215,6 +215,7 @@ public class HeadlessSession extends Session
 
 	private void stopEnvironment(Components endpoint, Logger log, String component) throws BWFLAException
 	{
+		log.info("Stopping Environment for component: " + component);
 		var stopResponse = sendEnvironmentStopRequest(component);
 
 			if (stopResponse.getUrl()==null){
@@ -271,7 +272,7 @@ public class HeadlessSession extends Session
 			return response.readEntity(SnapshotResponse.class);
 		}
 		else {
-			throw new BWFLAException("Snapshot did no return 200 but " + response.getStatus());
+			throw new BWFLAException("Snapshot did not return 200 but " + response.getStatus());
 		}
 	}
 
@@ -291,7 +292,7 @@ public class HeadlessSession extends Session
 			return response.readEntity(ProcessResultUrl.class);
 		}
 		else {
-			throw new BWFLAException("Snapshot did no return 200 but " + response.getStatus());
+			throw new BWFLAException("Stopping environemnt did no return 200 but " + response.getStatus());
 		}
 	}
 

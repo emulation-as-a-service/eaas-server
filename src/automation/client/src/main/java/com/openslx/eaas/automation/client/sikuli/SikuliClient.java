@@ -47,6 +47,14 @@ public class SikuliClient
 		return sikuliPostRequest(request, "/uploads");
 	}
 
+	public Response getLatestScreenshot()
+	{
+		LOG.info("Sending screenshot request to sikuli component backend on emucomp.");
+
+		var targetRequest = target.path("/screenshot").request();
+		return targetRequest.get();
+	}
+
 	public SikuliLogResponse getSikuliLogs()
 	{
 		LOG.info("Sending log request to sikuli component backend on emucomp.");

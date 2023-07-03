@@ -106,7 +106,7 @@ public class SikuliEmucompTasks
 		int success;
 
 		Path logDir = Path.of("/tmp-storage/emucomp-automation/sikuli/" + componentId);
-		if (!Files.exists(logDir)) {
+		if (Files.notExists(logDir)) {
 			Files.createDirectories(logDir);
 		}
 
@@ -210,17 +210,22 @@ public class SikuliEmucompTasks
 
 	public static ProcessResultUrl getDebugURL(String componentId) throws Exception
 	{
+		LOG.info("Starting getDebugURL...");
+		LOG.info("Taring debug files");
 		DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner("tar");
 		tarRunner.setWorkingDirectory(sikuliBasePath.resolve(componentId));
 		Path tgzPath = sikuliBasePath.resolve("sikuliDebug_" + componentId + ".tgz");
 		tarRunner.addArguments("-zcvf", tgzPath.toString(), ".");
 		tarRunner.execute(true);
 
+		LOG.info("Getting blobstore config values...");
 		final Configuration config = ConfigurationProvider.getConfiguration();
 		final BlobStore blobstore = BlobStoreClient.get()
-				.getBlobStorePort(config.get("ws.blobstore"));
+				.getBlobStorePort(config.get("ws.imagearchive")); //FIXME ws.blobstore needs to be added to config!!!
 		final String blobStoreAddress = config.get("rest.blobstore");
+		LOG.info("Blobstore Address: " + blobStoreAddress);
 
+		LOG.info("Preparing blob");
 		final BlobDescription blob = new BlobDescription()
 				.setDescription("Sikuli Debug Screenshots and Logs")
 				.setNamespace("Sikuli")
@@ -228,17 +233,22 @@ public class SikuliEmucompTasks
 				.setType(".tgz")
 				.setName("sikuli_debug");
 
+		LOG.info("Uploading Blob...");
 		BlobHandle handle = blobstore.put(blob);
 
-		try {
-			Files.delete(tgzPath);
-		}
-		catch (IOException e) {
-			LOG.warning("Could not delete file!");
-		}
 
 		ProcessResultUrl returnResult = new ProcessResultUrl();
-		returnResult.setUrl(handle.toRestUrl(blobStoreAddress));
+		String restUrl = handle.toRestUrl(blobStoreAddress);
+		LOG.info("Got blobstore URL for debug info: " + restUrl);
+
+//		try {
+//			Files.delete(tgzPath);
+//		}
+//		catch (IOException e) {
+//			LOG.warning("Could not delete file!");
+//		}
+
+		returnResult.setUrl(restUrl);
 
 		return returnResult;
 	}
@@ -255,6 +265,7 @@ public class SikuliEmucompTasks
 		Path parentDir = scriptPathAppserver.getParent();
 		Path parentName = parentDir.getName(parentDir.getNameCount() - 1);
 
+		LOG.info("Copying screenshots...");
 		copyScreenshots(componentId, info.getPid(), parentName);
 
 

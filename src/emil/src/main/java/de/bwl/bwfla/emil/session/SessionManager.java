@@ -149,12 +149,15 @@ public class SessionManager
 			// Remove stale entries...
 			if (curtime > session.getLastUpdate() + timeout) {
 				log.info("Stale session found: " + id);
+				log.info("Adding " + id + "to remove... (stale)");
 				idsToRemove.add(id);
 			}
 
 			if (session.isDetached()) {
-				if (session.hasExpirationTimestamp() && curtime > session.getExpirationTimestamp())
+				if (session.hasExpirationTimestamp() && curtime > session.getExpirationTimestamp()){
+					log.info("Adding " + id + "to remove... (detached)");
 					idsToRemove.add(id);
+				}
 				else
 					executor.execute(new SessionKeepAliveTask(session, log));
 			}
