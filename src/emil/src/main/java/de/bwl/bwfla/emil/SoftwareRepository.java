@@ -112,11 +112,11 @@ public class SoftwareRepository extends EmilRest
 		packages.filter(SoftwarePackage::isPublic)
 				.filter(sw -> !sw.getArchive().equals("zero conf"))
 				.forEach(sw -> {
-					LOG.info("Found software that needs to be migrated: " + sw.getPureId());
+					LOG.info("Found software that needs to be migrated: " + sw.getId());
 					var emilSoftwareObject = new EmilSoftwareObject();
 					emilSoftwareObject.setIsPublic(true);
 					emilSoftwareObject.setArchiveId("zero conf");
-					emilSoftwareObject.setId(sw.getPureId());
+					emilSoftwareObject.setId(sw.getId());
 					emilSoftwareObject.setLabel(sw.getName());
 					emilSoftwareObject.setAllowedInstances(sw.getNumSeats());
 					emilSoftwareObject.setObjectId(sw.getObjectId());
@@ -179,6 +179,12 @@ public class SoftwareRepository extends EmilRest
 
 	// ========== Public API ==============================
 
+	@Path("/actions")
+	public Actions actions()
+	{
+		return new Actions();
+	}
+
 	@Path("packages")
 	public SoftwarePackages packages()
 	{
@@ -193,6 +199,25 @@ public class SoftwareRepository extends EmilRest
 
 
 	// ========== Subresources ==============================
+
+	public class Actions
+	{
+		@POST
+		@Path("/sync")
+		@Secured(roles = {Role.RESTRICTED})
+		@Produces(MediaType.APPLICATION_JSON)
+		public Response sync()
+		{
+			try {
+				swHelper.sync();
+			}
+			catch (BWFLAException error) {
+				return Emil.internalErrorResponse(error);
+			}
+
+			return Emil.successMessageResponse("Software packages were synced successfully!");
+		}
+	}
 
 	public class SoftwarePackages
 	{

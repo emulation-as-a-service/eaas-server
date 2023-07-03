@@ -937,7 +937,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		this.addControlConnector(new StdoutLogConnector(emuRunner.getStdOutPath()));
-		this.addControlConnector(new StderrLogConnector(emuRunner.getStdOutPath()));
+		this.addControlConnector(new StderrLogConnector(emuRunner.getStdErrPath()));
 
 		this.addControlConnector(new SikuliConnector());
 		this.addControlConnector(new SikuliLogConnector(Path.of("/placeholder")));
