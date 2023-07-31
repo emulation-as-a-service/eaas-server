@@ -25,13 +25,13 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private String userTag;
 	private String os;
 	private String nativeConfig;
-
 	private String containerEmulatorVersion;
 	private String containerEmulatorName;
 
 	private boolean enablePrinting;
 	private boolean enableRelativeMouse;
 	private boolean shutdownByOs;
+	private boolean disableGhostCursor;
 	private boolean useXpra;
 	private boolean useWebRTC;
 	private String xpraEncoding;
@@ -107,6 +107,16 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setShutdownByOs(boolean shutdownByOs) {
 		this.shutdownByOs = shutdownByOs;
+	}
+
+	public boolean isDisableGhostCursor()
+	{
+		return disableGhostCursor;
+	}
+
+	public void setDisableGhostCursor(boolean disableGhostCursor)
+	{
+		this.disableGhostCursor = disableGhostCursor;
 	}
 
 	public String getUserTag() {

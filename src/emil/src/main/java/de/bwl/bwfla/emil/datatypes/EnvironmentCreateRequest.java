@@ -3,7 +3,6 @@ package de.bwl.bwfla.emil.datatypes;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emucomp.api.Drive;
-import de.bwl.bwfla.emucomp.api.UiOptions;
 
 import java.util.List;
 
@@ -42,6 +41,7 @@ public class EnvironmentCreateRequest extends JaxbType{
 	private boolean useXpra;
 	private String xpraEncoding;
 	private boolean shutdownByOs;
+	private boolean disableGhostCursor;
 	private String operatingSystemId;
 	private boolean enableNetwork;
 	private boolean enableInternet;
@@ -144,6 +144,16 @@ public class EnvironmentCreateRequest extends JaxbType{
 	public void setHasOutput(EmilEnvironment.OutputType hasOutput)
 	{
 		this.hasOutput = hasOutput;
+	}
+
+	public boolean isDisableGhostCursor()
+	{
+		return disableGhostCursor;
+	}
+
+	public void setDisableGhostCursor(boolean disableGhostCursor)
+	{
+		this.disableGhostCursor = disableGhostCursor;
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown=true)
