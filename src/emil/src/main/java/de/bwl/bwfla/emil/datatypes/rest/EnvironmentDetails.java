@@ -215,6 +215,7 @@ public class EnvironmentDetails {
             p.id = parentEnv.getEnvId();
             p.text = parentEnv.getDescription();
             p.archive = parentEnv.getArchive();
+            p.timestamp = parentEnv.getTimestamp();
             revisions.add(p);
         }
 
@@ -476,6 +477,9 @@ public class EnvironmentDetails {
         @XmlElement
         String archive;
 
+        @XmlElement
+        String timestamp;
+
         public String getId()
         {
             return id;
@@ -489,6 +493,11 @@ public class EnvironmentDetails {
         public String getArchive()
         {
             return archive;
+        }
+
+        public String getTimestamp()
+        {
+            return timestamp;
         }
     }
 
