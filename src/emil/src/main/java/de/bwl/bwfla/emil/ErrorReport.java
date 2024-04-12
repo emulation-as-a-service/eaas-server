@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
+import de.bwl.bwfla.common.utils.EaasBuildInfo;
 import de.bwl.bwfla.common.utils.ProcessRunner;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
@@ -54,6 +55,7 @@ public class ErrorReport
 	{
 		java.nio.file.Path outpath = null;
 		try {
+			LOG.info("Error-report requested on eaas-server version " + EaasBuildInfo.getVersion());
 			outpath = Files.createTempFile("eaas-er-", ".gpg");
 
 			final ProcessRunner runner = new ProcessRunner();
