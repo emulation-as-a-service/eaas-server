@@ -39,7 +39,9 @@
 					<commitIdGenerationMode>flat</commitIdGenerationMode>
 					<abbrevLength>10</abbrevLength>
 					<gitDescribe>
-						<skip>true</skip>
+						<skip>false</skip>
+						<always>true</always>
+						<forceLongFormat>true</forceLongFormat>
 					</gitDescribe>
 				</configuration>
 			</plugin>
