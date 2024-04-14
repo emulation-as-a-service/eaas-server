@@ -7,7 +7,7 @@ stages:
 variables:
   MAVEN_OPTS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dmaven.repo.local=.m2/repository"
   GIT_STRATEGY: fetch
-  GIT_DEPTH: 50
+  GIT_DEPTH: 500
 
 .ear-upload: &ear-upload
   after_script:
