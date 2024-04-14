@@ -32,14 +32,6 @@ public class EaasBuildInfo
 			if (istream != null) {
 				properties.load(istream);
 			}
-
-			var commit = properties.getProperty(PROPERTY_COMMIT_ID);
-			if (commit != null) {
-				commit = commit.replace("-false", "")
-						.replace("-true", "-dirty");
-
-				properties.setProperty(PROPERTY_COMMIT_ID, commit.toUpperCase());
-			}
 		}
 		catch (Throwable error) {
 			Logger.getLogger(EaasBuildInfo.class.getSimpleName())
