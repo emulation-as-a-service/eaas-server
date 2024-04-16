@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.EaasBuildInfo;
 import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
@@ -43,6 +44,8 @@ import javax.ws.rs.core.Response.Status;
 import java.io.File;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
+import java.util.logging.Level;
 
 
 @Path("/admin")
@@ -89,12 +92,22 @@ public class Admin extends EmilRest
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getBuildInfo()
 	{
-		final JsonObject json = Json.createObjectBuilder()
-				.add("status", "0")
-				.add("version", EaasBuildInfo.getVersion())
-				.build();
+		final var json = new LinkedHashMap<String, Object>();
+		json.put("status", "0");
+		json.put("version", EaasBuildInfo.getVersion());
 
-		return Admin.createResponse(Status.OK, json.toString());
+		try {
+			final var data = DataUtils.json()
+					.writer(true)
+					.writeValueAsString(json);
+
+			return Admin.createResponse(Status.OK, data);
+		}
+		catch (Exception error) {
+			final var message = "Serializing build-info failed!";
+			LOG.log(Level.WARNING, message, error);
+			return Admin.internalErrorResponse(message);
+		}
 	}
 
 	@GET
