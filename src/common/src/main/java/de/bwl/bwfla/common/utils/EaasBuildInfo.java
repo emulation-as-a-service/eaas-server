@@ -11,11 +11,17 @@ public class EaasBuildInfo
 	private static final Properties PROPERTIES = EaasBuildInfo.load("/eaas-version.properties");
 
 	private static final String PROPERTY_COMMIT_ID = "git.commit.id";
+	private static final String PROPERTY_VERSION = "git.commit.id.describe";
 
+
+	public static String getCommitId()
+	{
+		return EaasBuildInfo.get(PROPERTY_COMMIT_ID);
+	}
 
 	public static String getVersion()
 	{
-		return EaasBuildInfo.get(PROPERTY_COMMIT_ID);
+		return EaasBuildInfo.get(PROPERTY_VERSION);
 	}
 
 	private static String get(String key)
