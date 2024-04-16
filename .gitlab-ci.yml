@@ -47,6 +47,7 @@ gateway-build:
   stage: customize
   script:
     - cp -f src/ear/src/main/application/META-INF/{deployment-gateway.xml,jboss-deployment-structure.xml}
+    - git update-index --assume-unchanged src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean package -P '!emucomp' -pl ear -am -T1C
   <<: *ear-upload
   <<: *maven-cache
@@ -56,6 +57,7 @@ emucomp-build:
   stage: customize
   script:
     - cp -f src/ear/src/main/application/META-INF/{deployment-emucomp.xml,jboss-deployment-structure.xml}
+    - git update-index --assume-unchanged src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean package -P emucomp,imagearchive,blobstore -pl ear -am -T1C
   <<: *ear-upload
   <<: *maven-cache
