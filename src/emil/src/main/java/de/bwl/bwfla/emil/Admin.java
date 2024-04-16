@@ -94,6 +94,7 @@ public class Admin extends EmilRest
 	{
 		final var json = new LinkedHashMap<String, Object>();
 		json.put("status", "0");
+		json.put("branch", EaasBuildInfo.getBranch());
 		json.put("commit", EaasBuildInfo.getCommitId());
 		json.put("version", EaasBuildInfo.getVersion());
 

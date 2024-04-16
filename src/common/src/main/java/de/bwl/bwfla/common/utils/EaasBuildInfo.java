@@ -10,9 +10,15 @@ public class EaasBuildInfo
 {
 	private static final Properties PROPERTIES = EaasBuildInfo.load("/eaas-version.properties");
 
+	private static final String PROPERTY_BRANCH = "git.branch";
 	private static final String PROPERTY_COMMIT_ID = "git.commit.id";
 	private static final String PROPERTY_VERSION = "git.commit.id.describe";
 
+
+	public static String getBranch()
+	{
+		return EaasBuildInfo.get(PROPERTY_BRANCH);
+	}
 
 	public static String getCommitId()
 	{
