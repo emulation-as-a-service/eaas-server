@@ -7,7 +7,7 @@ stages:
 variables:
   MAVEN_OPTS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dmaven.repo.local=.m2/repository"
   GIT_STRATEGY: fetch
-  GIT_DEPTH: 50
+  GIT_DEPTH: 500
 
 .ear-upload: &ear-upload
   after_script:
@@ -46,8 +46,8 @@ standalone-server-build:
 gateway-build:
   stage: customize
   script:
-    - echo 'git.commit.id=${git.commit.id.abbrev}-false' > src/common/src/main/resources/eaas-version.properties
     - cp -f src/ear/src/main/application/META-INF/{deployment-gateway.xml,jboss-deployment-structure.xml}
+    - git update-index --assume-unchanged src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean package -P '!emucomp' -pl ear -am -T1C
   <<: *ear-upload
   <<: *maven-cache
@@ -56,8 +56,8 @@ gateway-build:
 emucomp-build:
   stage: customize
   script:
-    - echo 'git.commit.id=${git.commit.id.abbrev}-false' > src/common/src/main/resources/eaas-version.properties
     - cp -f src/ear/src/main/application/META-INF/{deployment-emucomp.xml,jboss-deployment-structure.xml}
+    - git update-index --assume-unchanged src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean package -P emucomp,imagearchive,blobstore -pl ear -am -T1C
   <<: *ear-upload
   <<: *maven-cache

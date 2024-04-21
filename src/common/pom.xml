@@ -24,9 +24,9 @@
 		</resources>
 		<plugins>
 			<plugin>
-				<groupId>pl.project13.maven</groupId>
-				<artifactId>git-commit-id-plugin</artifactId>
-				<version>4.0.0</version>
+				<groupId>io.github.git-commit-id</groupId>
+				<artifactId>git-commit-id-maven-plugin</artifactId>
+				<version>8.0.2</version>
 				<executions>
 					<execution>
 						<goals>
@@ -39,7 +39,9 @@
 					<commitIdGenerationMode>flat</commitIdGenerationMode>
 					<abbrevLength>10</abbrevLength>
 					<gitDescribe>
-						<skip>true</skip>
+						<skip>false</skip>
+						<always>true</always>
+						<forceLongFormat>true</forceLongFormat>
 					</gitDescribe>
 				</configuration>
 			</plugin>
