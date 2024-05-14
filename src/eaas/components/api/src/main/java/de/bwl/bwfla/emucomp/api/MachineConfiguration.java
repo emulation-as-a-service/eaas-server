@@ -210,6 +210,14 @@ public class MachineConfiguration
     }
 
     public String getCheckpointBindingId() {
+        return this.getCheckpointBindingId(true);
+    }
+
+    public String getCheckpointBindingId(boolean stripped) {
+        final var prefix = "binding://";
+        if (stripped && checkpointBindingId.startsWith(prefix))
+            return checkpointBindingId.substring(prefix.length());
+
         return checkpointBindingId;
     }
 
