@@ -141,20 +141,20 @@ public class SessionManager
 			if (curtime > session.getLastUpdate() + timeout) {
 				log.info("Stale session found: " + id);
 				idsToRemove.add(id);
+				return;
 			}
 
-			if (session.isDetached()) {
-				if (session.hasExpirationTimestamp() && curtime > session.getExpirationTimestamp())
-					idsToRemove.add(id);
-				else
-					executor.execute(new SessionKeepAliveTask(session, log));
+			// Remove expired sessions...
+			if (session.hasExpirationTimestamp() && curtime > session.getExpirationTimestamp()) {
+				log.info("Session '" + id + "' expired!");
+				idsToRemove.add(id);
+				return;
 			}
+
+			executor.execute(new SessionKeepAliveTask(session, log));
 		});
 
-		idsToRemove.forEach((id) -> {
-			log.info("Session '" + id + "' expired!");
-			this.remove(id);
-		});
+		idsToRemove.forEach(this::remove);
 	}
 
 	/** Remove session */
@@ -261,7 +261,7 @@ public class SessionManager
 		@Override
 		public void run()
 		{
-			session.keepalive(endpoint, log);
+			session.keepalive(endpoint, log, session.isDetached());
 		}
 	}
 }

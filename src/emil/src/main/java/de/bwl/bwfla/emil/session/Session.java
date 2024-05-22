@@ -146,6 +146,14 @@ public class Session extends JaxbType
 
 	public void keepalive(Components endpoint, Logger log)
 	{
+		this.keepalive(endpoint, log, true);
+	}
+
+	public void keepalive(Components endpoint, Logger log, boolean refresh)
+	{
+		if (refresh)
+			this.update();
+
 		final Function<SessionComponent, Long> checker = (component) -> {
 			try {
 				endpoint.keepalive(component.id());
@@ -165,8 +173,6 @@ public class Session extends JaxbType
 
 		if (numfailed.isPresent() && numfailed.get() > 0L)
 			log.info(numfailed.get() + " out of " + components.size() + " component(s) failed in session " + id + "!");
-
-		this.update();
 	}
 
 	private void update()
