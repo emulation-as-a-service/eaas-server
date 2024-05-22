@@ -134,7 +134,7 @@ public class SessionManager
 	public void update(ExecutorService executor)
 	{
 		final List<String> idsToRemove = new ArrayList<String>();
-		final long timeout = 2L * sessionExpirationTimeout.toMillis();
+		final long timeout = sessionExpirationTimeout.toMillis();
 		final long curtime = SessionManager.timems();
 		sessions.forEach((id, session) -> {
 			// Remove stale entries...
@@ -242,9 +242,24 @@ public class SessionManager
 	@PostConstruct
 	private void initialize()
 	{
-		final Runnable trigger = () -> executor.execute(() -> update(executor));
-		final long delay = resourceExpirationTimeout.toMillis() * 8L / 10L;
-		scheduler.scheduleWithFixedDelay(trigger, delay, delay, TimeUnit.MILLISECONDS);
+		final long delay = resourceExpirationTimeout.toMillis() / 2L;
+		final Runnable trigger = () -> executor.execute(new RefreshTask());
+		scheduler.scheduleAtFixedRate(trigger, delay, delay, TimeUnit.MILLISECONDS);
+	}
+
+	private class RefreshTask implements Runnable
+	{
+		@Override
+		public void run()
+		{
+			final var manager = SessionManager.this;
+			try {
+				manager.update(executor);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Refreshing sessions failed!", error);
+			}
+		}
 	}
 
 	private class SessionKeepAliveTask implements Runnable
