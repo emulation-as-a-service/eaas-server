@@ -122,14 +122,7 @@ public class SessionManager
 	/** Send keepalive for session */
 	public boolean keepalive(String id)
 	{
-		final var cursession = sessions.computeIfPresent(id, (unused, session) -> {
-			final long lifetime = session.getLifetime();
-			if (lifetime > 0L)
-				session.setExpirationTimestamp(SessionManager.timems() + lifetime);
-
-			return session;
-		});
-
+		final var cursession = sessions.get(id);
 		if (cursession == null)
 			return false;
 
