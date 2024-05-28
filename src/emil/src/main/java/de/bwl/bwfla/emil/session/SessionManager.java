@@ -122,14 +122,7 @@ public class SessionManager
 	/** Send keepalive for session */
 	public boolean keepalive(String id)
 	{
-		final var cursession = sessions.computeIfPresent(id, (unused, session) -> {
-			final long lifetime = session.getLifetime();
-			if (lifetime > 0L)
-				session.setExpirationTimestamp(SessionManager.timems() + lifetime);
-
-			return session;
-		});
-
+		final var cursession = sessions.get(id);
 		if (cursession == null)
 			return false;
 
@@ -141,27 +134,27 @@ public class SessionManager
 	public void update(ExecutorService executor)
 	{
 		final List<String> idsToRemove = new ArrayList<String>();
-		final long timeout = 2L * sessionExpirationTimeout.toMillis();
+		final long timeout = sessionExpirationTimeout.toMillis();
 		final long curtime = SessionManager.timems();
 		sessions.forEach((id, session) -> {
 			// Remove stale entries...
 			if (curtime > session.getLastUpdate() + timeout) {
 				log.info("Stale session found: " + id);
 				idsToRemove.add(id);
+				return;
 			}
 
-			if (session.isDetached()) {
-				if (session.hasExpirationTimestamp() && curtime > session.getExpirationTimestamp())
-					idsToRemove.add(id);
-				else
-					executor.execute(new SessionKeepAliveTask(session, log));
+			// Remove expired sessions...
+			if (session.hasExpirationTimestamp() && curtime > session.getExpirationTimestamp()) {
+				log.info("Session '" + id + "' expired!");
+				idsToRemove.add(id);
+				return;
 			}
+
+			executor.execute(new SessionKeepAliveTask(session, log));
 		});
 
-		idsToRemove.forEach((id) -> {
-			log.info("Session '" + id + "' expired!");
-			this.remove(id);
-		});
+		idsToRemove.forEach(this::remove);
 	}
 
 	/** Remove session */
@@ -249,9 +242,24 @@ public class SessionManager
 	@PostConstruct
 	private void initialize()
 	{
-		final Runnable trigger = () -> executor.execute(() -> update(executor));
-		final long delay = resourceExpirationTimeout.toMillis() * 8L / 10L;
-		scheduler.scheduleWithFixedDelay(trigger, delay, delay, TimeUnit.MILLISECONDS);
+		final long delay = resourceExpirationTimeout.toMillis() / 2L;
+		final Runnable trigger = () -> executor.execute(new RefreshTask());
+		scheduler.scheduleAtFixedRate(trigger, delay, delay, TimeUnit.MILLISECONDS);
+	}
+
+	private class RefreshTask implements Runnable
+	{
+		@Override
+		public void run()
+		{
+			final var manager = SessionManager.this;
+			try {
+				manager.update(executor);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Refreshing sessions failed!", error);
+			}
+		}
 	}
 
 	private class SessionKeepAliveTask implements Runnable
@@ -268,7 +276,7 @@ public class SessionManager
 		@Override
 		public void run()
 		{
-			session.keepalive(endpoint, log);
+			session.keepalive(endpoint, log, session.isDetached());
 		}
 	}
 }
