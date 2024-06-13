@@ -148,6 +148,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	protected final ProcessRunner emuRunner = new ProcessRunner();
 	protected final ArrayList<ProcessRunner> vdeProcesses = new ArrayList<ProcessRunner>();
 
+	protected final Map<String, String> vars = new HashMap();
+	protected int driveNum = -1;
+
 	protected final BindingsManager bindings = new BindingsManager(LOG);
 
 	protected String protocol;
@@ -1673,6 +1676,38 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			for(Nic nic: emuEnvironment.getNic())
 				prepareNic(nic);
 
+			// Example: @ QEMU_AUDIO_DRV=pa qemu-system-x86_64 -vga cirrus -smp 1 -net nic,model=rtl8139 -soundhw pcspk -m 1024 -boot order=c {if_drive_2}-drive file={drive_2},if=ide,bus=0,unit=0,media=disk {if_drive_3}-drive file={drive_3},if=ide,bus=0,unit=1,media=disk
+			String config = this.getNativeConfig();
+			if (config != null) {
+				String[] tokens = config.trim().split("\\s+");
+				if (tokens.length > 0 && tokens[0].equals("@")) {
+					tokens = Arrays.copyOfRange(tokens, 1, tokens.length);
+					var command = this.emuRunner.getCommand();
+					command.clear();
+					command.add("env");
+					for (var token : tokens) command.add(token);
+				}
+			}
+
+			var command = this.emuRunner.getCommand();
+			var command2 = command.toArray(new String[]{});
+			command.clear();
+			arguments: for (var argument : command2) {
+				var argument2 = new StringBuffer();
+				var matcher = Pattern.compile("(?:(\\{|\\})\\1)|\\{(.*?)\\}").matcher(argument);
+				while (matcher.find()) {
+					if (matcher.group(1) != null)
+						matcher.appendReplacement(argument2, matcher.group(1));
+					else {
+						var key = matcher.group(2);
+						if (!this.vars.containsKey(key)) continue arguments;
+						matcher.appendReplacement(argument2, this.vars.get(key));
+					}
+				}
+				matcher.appendTail(argument2);
+				command.add(argument2.toString());
+			}
+
 			this.finishRuntimeConfiguration();
 
 		} catch (IllegalArgumentException | IOException | JAXBException e) {
@@ -2443,6 +2478,19 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			if (version == null || version.isEmpty())
 				version = EmulatorMetaData.DEFAULT_VERSION;
 
+			if (version.startsWith("@")) {
+				final Environment environment = archive.api()
+					.v2()
+					.environments()
+					.fetch(version.substring(1));
+
+				if (environment instanceof MachineConfiguration) {
+					final var machineConfiguration = ((MachineConfiguration)environment);
+					version = machineConfiguration.getEmulator().getVersion();
+					env.getNativeConfig().setValue(machineConfiguration.getNativeConfig().getValue());
+				}
+			}
+
 			LOG.info("Looking up image for emulator '" + name + " (" + version + ")'...");
 			final var emulator = emuMetaHelper.fetch(name, version);
 			final var image = emulator.image();
@@ -2533,6 +2581,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	 */
 	protected void prepareDrive(Drive drive) throws BWFLAException
 	{
+		this.driveNum++;
+
 		// All drives *directly* work on a resource (binding) that has been
 		// set up earlier, so no mounting, cow-ing or other tricks
 		// are necessary here.
@@ -2541,6 +2591,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			return;
 
 		addDrive(drive);
+
+		try {
+			var imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
+			this.vars.put("drive_" + this.driveNum, imagePath.toString());
+			this.vars.put("if_drive_" + this.driveNum, "");
+		} catch (Exception e) {
+			LOG.warning("Drive doesn't reference a valid binding, attach canceled.");
+			e.printStackTrace();
+		}
 
 		// String img = null;
 		//

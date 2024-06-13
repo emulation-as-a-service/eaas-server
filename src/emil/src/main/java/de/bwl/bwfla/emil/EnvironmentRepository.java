@@ -301,6 +301,41 @@ public class EnvironmentRepository extends EmilRest
 				.metadata(MetaDataKindV2.EMULATORS)
 				.fetch(ImageArchiveMappers.JSON_TREE_TO_EMULATOR_METADATA);
 
+		emilEnvRepo.getEmilEnvironments().filter(emilEnvironment ->
+				emilEnvironment.getTitle().startsWith("@")
+		).forEach(
+				emilEnvironment -> {
+					final Environment environment = imagearchive.api()
+							.v2()
+							.environments()
+							.fetch(emilEnvironment.getEnvId());
+
+					if (environment instanceof MachineConfiguration) {
+						final var machineConfiguration = ((MachineConfiguration)environment);
+
+						final var metadata = new ImageMetadata();
+						metadata.setName(machineConfiguration.getEmulator().getContainerName());
+						metadata.setVersion("@" + emilEnvironment.getEnvId());
+						final var ee = new ImageNameIndex.Entries.Entry();
+						ee.setKey(emilEnvironment.getTitle() + " (" + machineConfiguration.getEmulator().getContainerName() + ")");
+						ee.setValue(metadata);
+						entries.getEntry()
+								.add(ee);
+					} else if (environment instanceof ContainerConfiguration) {
+						final var containerConfiguration = ((ContainerConfiguration)environment);
+
+						final var metadata = new ImageMetadata();
+						metadata.setName("runc2");
+						metadata.setVersion("@" + emilEnvironment.getEnvId());
+						final var ee = new ImageNameIndex.Entries.Entry();
+						ee.setKey(emilEnvironment.getTitle());
+						ee.setValue(metadata);
+						entries.getEntry()
+								.add(ee);
+					}
+				}
+		);
+
 		final Consumer<EmulatorMetaData> converter = (emulator) -> {
 			final var metadata = new ImageMetadata();
 			metadata.setName(emulator.name());
