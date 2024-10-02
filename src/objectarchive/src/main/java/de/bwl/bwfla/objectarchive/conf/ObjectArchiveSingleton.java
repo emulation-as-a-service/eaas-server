@@ -205,6 +205,31 @@ public class ObjectArchiveSingleton
 		return executor;
 	}
 
+	public static void registerUserArchive(String userId) throws BWFLAException {
+		final var archives = ObjectArchiveSingleton.archiveMap;
+		final var usrarchives = ObjectArchiveSingleton.userArchiveMap;
+		try {
+			final var zeroconf = archives.get(ZEROCONF_ARCHIVE_NAME);
+			final var s3desc = (zeroconf instanceof DigitalObjectS3Archive) ?
+					((DigitalObjectS3Archive) zeroconf).getDescriptor() : null;
+
+			final var userArchiveId = ObjectArchiveSingleton.getArchiveIdForUser(userId);
+			final var usrdesc = DigitalObjectUserArchiveDescriptor.create(userArchiveId, s3desc);
+			usrarchives.put(userArchiveId, new DigitalObjectUserArchive(usrdesc));
+		}
+		catch (Exception error) {
+			throw new BWFLAException(error);
+		}
+	}
+
+	public static String getArchiveIdForUser(String userId)
+	{
+		final var userArchivePrefix = ConfigurationProvider.getConfiguration()
+				.get("objectarchive.user_archive_prefix");
+
+		return (userId.startsWith(userArchivePrefix)) ? userId : userArchivePrefix + userId;
+	}
+
 	public static TaskState submitTask(BlockingTask<Object> task)
 	{
 		String taskId = taskManager.submit(task);
