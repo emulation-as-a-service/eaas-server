@@ -198,6 +198,25 @@ public class ObjectArchiveSingleton
 
 		final var archive = archiveMap.get(defaultArchive);
 		LOG.info("Registered default archive: " + defaultArchive + " -> " + archive.getName());
+
+		// initialize all known user-archives...
+		try {
+			LOG.info("Loading private user-archives...");
+			final var zeroconf = (DigitalObjectS3Archive) archiveMap.get(ZEROCONF_ARCHIVE_NAME);
+			DigitalObjectUserArchive.listArchiveNames(zeroconf.getDescriptor())
+					.forEach((archiveId) -> {
+						try {
+							ObjectArchiveSingleton.registerUserArchive(archiveId);
+							LOG.info("Initialized private user-archive '" + archiveId + "'");
+						}
+						catch (Exception error) {
+							LOG.log(Level.WARNING, "Loading private user-archive '" + archiveId + "' failed!", error);
+						}
+					});
+		}
+		catch (Exception error) {
+			throw new ObjectArchiveInitException("Loading private user-archives failed!", error);
+		}
 	}
 
 	public static ExecutorService executor()
