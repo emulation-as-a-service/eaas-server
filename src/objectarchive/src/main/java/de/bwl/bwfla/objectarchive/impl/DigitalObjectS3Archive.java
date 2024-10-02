@@ -722,14 +722,14 @@ public class DigitalObjectS3Archive extends DigitalObjectArchiveBase implements 
 
 	// ===== Internal Helpers ===============
 
-	private static class ObjectIdMapper implements Function<BlobDescription, String>
+	protected static class ObjectIdMapper implements Function<BlobDescription, String>
 	{
 		private final String prefix;
 		private String previd;
 
 		public ObjectIdMapper(String prefix)
 		{
-			this.prefix = prefix;
+			this.prefix = (prefix != null) ? prefix : "";
 			this.previd = null;
 		}
 
