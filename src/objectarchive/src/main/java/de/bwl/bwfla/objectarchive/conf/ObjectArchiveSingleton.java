@@ -198,11 +198,55 @@ public class ObjectArchiveSingleton
 
 		final var archive = archiveMap.get(defaultArchive);
 		LOG.info("Registered default archive: " + defaultArchive + " -> " + archive.getName());
+
+		// initialize all known user-archives...
+		try {
+			LOG.info("Loading private user-archives...");
+			final var zeroconf = (DigitalObjectS3Archive) archiveMap.get(ZEROCONF_ARCHIVE_NAME);
+			DigitalObjectUserArchive.listArchiveNames(zeroconf.getDescriptor())
+					.forEach((archiveId) -> {
+						try {
+							ObjectArchiveSingleton.registerUserArchive(archiveId);
+							LOG.info("Initialized private user-archive '" + archiveId + "'");
+						}
+						catch (Exception error) {
+							LOG.log(Level.WARNING, "Loading private user-archive '" + archiveId + "' failed!", error);
+						}
+					});
+		}
+		catch (Exception error) {
+			throw new ObjectArchiveInitException("Loading private user-archives failed!", error);
+		}
 	}
 
 	public static ExecutorService executor()
 	{
 		return executor;
+	}
+
+	public static void registerUserArchive(String userId) throws BWFLAException {
+		final var archives = ObjectArchiveSingleton.archiveMap;
+		final var usrarchives = ObjectArchiveSingleton.userArchiveMap;
+		try {
+			final var zeroconf = archives.get(ZEROCONF_ARCHIVE_NAME);
+			final var s3desc = (zeroconf instanceof DigitalObjectS3Archive) ?
+					((DigitalObjectS3Archive) zeroconf).getDescriptor() : null;
+
+			final var userArchiveId = ObjectArchiveSingleton.getArchiveIdForUser(userId);
+			final var usrdesc = DigitalObjectUserArchiveDescriptor.create(userArchiveId, s3desc);
+			usrarchives.put(userArchiveId, new DigitalObjectUserArchive(usrdesc));
+		}
+		catch (Exception error) {
+			throw new BWFLAException(error);
+		}
+	}
+
+	public static String getArchiveIdForUser(String userId)
+	{
+		final var userArchivePrefix = ConfigurationProvider.getConfiguration()
+				.get("objectarchive.user_archive_prefix");
+
+		return (userId.startsWith(userArchivePrefix)) ? userId : userArchivePrefix + userId;
 	}
 
 	public static TaskState submitTask(BlockingTask<Object> task)

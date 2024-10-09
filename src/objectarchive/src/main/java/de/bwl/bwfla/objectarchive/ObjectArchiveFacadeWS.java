@@ -30,13 +30,8 @@ import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.taskmanager.TaskState;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectUserArchiveDescriptor;
-import de.bwl.bwfla.objectarchive.impl.DigitalObjectS3Archive;
-import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
-
-import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.ZEROCONF_ARCHIVE_NAME;
 
 @Stateless
 @MTOM
@@ -287,7 +282,7 @@ public class ObjectArchiveFacadeWS
 			return null;
 		}
 
-		final var userArchiveId = this.getArchiveIdForUser(userId);
+		final var userArchiveId = ObjectArchiveSingleton.getArchiveIdForUser(userId);
 		final var usrarchives = ObjectArchiveSingleton.userArchiveMap;
 		final var names = new HashSet<>(ObjectArchiveSingleton.archiveMap.keySet());
 		names.remove("default");
@@ -302,25 +297,7 @@ public class ObjectArchiveFacadeWS
 	}
 
 	public void registerUserArchive(String userId) throws BWFLAException {
-		final var archives = ObjectArchiveSingleton.archiveMap;
-		final var usrarchives = ObjectArchiveSingleton.userArchiveMap;
-		try {
-			final var zeroconf = archives.get(ZEROCONF_ARCHIVE_NAME);
-			final var s3desc = (zeroconf instanceof DigitalObjectS3Archive) ?
-					((DigitalObjectS3Archive) zeroconf).getDescriptor() : null;
-
-			final var userArchiveId = this.getArchiveIdForUser(userId);
-			final var usrdesc = DigitalObjectUserArchiveDescriptor.create(userArchiveId, s3desc);
-			usrarchives.put(userArchiveId, new DigitalObjectUserArchive(usrdesc));
-		}
-		catch (Exception error) {
-			throw new BWFLAException(error);
-		}
-	}
-
-	private String getArchiveIdForUser(String userId)
-	{
-		return (userId.startsWith(USERARCHIVEPRIFIX)) ? userId : USERARCHIVEPRIFIX + userId;
+		ObjectArchiveSingleton.registerUserArchive(userId);
 	}
 
 	private <T> DataHandler toDataHandler(Stream<T> source, Class<T> klass, String name)
